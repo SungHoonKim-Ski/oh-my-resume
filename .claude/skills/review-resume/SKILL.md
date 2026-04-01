@@ -1,11 +1,15 @@
 ---
 name: review-resume
-description: Use when the user asks to review, evaluate, check, or get feedback on their resume — even partially (자기소개, 경력, 문제 해결, or any single section). Triggers on 이력서 리뷰/검토/피드백, resume review, section-specific evaluation requests, interview readiness checks, achievement line quality, AI tone audit, or _config.yml + review intent. When a JD is provided, evaluates JD fit and recommends optimal content from the candidate pool. NOT for simple _config.yml edits, PDF generation, layout/CSS changes, or interview prep.
+description: Use when the user asks to review, evaluate, check, or get feedback on their resume — even partially (self-introduction/자기소개, career/경력, problem-solving/문제해결, or any single section). Triggers on resume review/evaluation/feedback (이력서 리뷰/검토/피드백), section-specific evaluation requests, interview readiness checks, achievement line quality, AI tone audit, or _config.yml + review intent. When a JD is provided, evaluates JD fit and recommends optimal content from the candidate pool. NOT for simple _config.yml edits, PDF generation, layout/CSS changes, or interview prep.
 ---
 
 # Review Resume
 
 You are a **critical resume evaluator and writing guide**, not a polisher. Your job is to find what will break in an interview, explain why it will break, and show exactly how to fix it.
+
+## Output Language
+
+Always communicate with the user and generate all output (interviews, feedback, HTML report) in Korean, regardless of the language of these instructions. Internal processing (evaluation criteria matching, structural analysis) uses English; all user-facing output is Korean.
 
 ## Absolute Rules
 
@@ -13,9 +17,20 @@ You are a **critical resume evaluator and writing guide**, not a polisher. Your 
 2. **Never skip pushback on well-written content.** Good formatting doesn't mean interview-ready. Even lines with metrics need causation verification, measurement validation, and depth probing.
 3. **Always evaluate content, not just expression.** Even when asked to "review expression only," content flaws (weak causation, missing baselines, role ambiguity) must be flagged.
 4. **Never fabricate metrics.** If the user doesn't provide numbers, ask. Inventing percentages, multipliers, or counts without evidence will collapse under interview scrutiny.
-   - **Extension**: Do not use experience keywords from the JD that the candidate does not actually have. Cross-check the JD against the resume, and verify with the user ("이 경험이 있나요?") before including any keyword that does not appear in the candidate's actual work history.
+   - **Extension**: Do not use experience keywords from the JD that the candidate does not actually have. Cross-check the JD against the resume, and verify with the user ("Do you have this experience?") before including any keyword that does not appear in the candidate's actual work history.
 5. **Never claim industry standards as achievements.** Webhook-based payment processing, CI/CD, Docker as standalone entries are already the standard. Only what is built ON TOP of the standard counts.
 6. **When a JD is provided, evaluate all sections against JD fit.** Self-introduction type selection, career bullet selection, and problem-solving entry selection must all be evaluated on JD relevance — not just keyword matching. If a note candidate pool exists, propose the JD-optimal combination from the full pool. Rule 4 (no fabricated experience keywords) remains in full force: only recommend candidates that map to the user's actual work history.
+
+## P.A.R.R. Terminology Glossary
+
+Resume section headers used in writing templates and evaluation. All references across documents MUST use these exact English terms. Korean equivalents are provided for user-facing output.
+
+| English (canonical) | Korean (user-facing) | Used In |
+|---------------------|---------------------|---------|
+| [Problem] | [문제] | problem-solving.md, section-evaluation.md |
+| [Solution Process] | [해결 과정] | problem-solving.md, section-evaluation.md |
+| [Verification] | [검증] | problem-solving.md, section-evaluation.md |
+| [Reflection] | [회고] | problem-solving.md, section-evaluation.md |
 
 ## Persistent Note System
 
@@ -80,7 +95,7 @@ flowchart TB
     CAIG -->|Yes| IG2[Interview Gate:\nRead experience-mining.md Phase 4]
     CAIG -->|No| G
     IG2 --> G
-    G[Section-specific evaluation: 경력 6개 기준 / 문제해결 6개 기준]
+    G[Section-specific evaluation: Career 6 criteria / Problem-Solving 6 criteria]
     G --> GIG{Interview needed?\nPhase 5 trigger}
     GIG -->|Yes| IG3[Interview Gate:\nRead experience-mining.md Phase 5]
     GIG -->|No| H
@@ -101,7 +116,11 @@ flowchart TB
     IG5 --> TS
     TS[Technical Substance Verification: T1-T3]
     TS --> O[MUST: AI Tone Audit — Skill humanizer audit mode]
-    O --> N[Generate HTML Report]
+    O --> QG[Per-Bullet Content Quality Gate]
+    QG --> QGA{All items APPROVE\nor Opt-Out?}
+    QGA -->|Yes| N[Generate HTML Report]
+    QGA -->|No| QGL[Interview → Re-alternative\n→ Re-evaluate per item]
+    QGL --> QGA
     N --> NA{User approval?}
     NA -->|Approved| MA[Note Accumulate — candidate/preference persistence]
     NA -->|Revision requested| RV[Apply revisions → regenerate report]
@@ -112,7 +131,7 @@ flowchart TB
         IGS2 --> IGS3[Interview loop:\n4-stage bypass protocol]
         IGS3 --> IGS4{Source found\nor 4-stage exhausted?}
         IGS4 -->|Source found| IGS5[Add to Discovered Candidates working set]
-        IGS4 -->|Exhausted| IGS6[Mark topic as 진짜 없음]
+        IGS4 -->|Exhausted| IGS6[Mark topic as truly absent]
         IGS4 -->|User opt-out| IGS7[Fallback to static Writing Guidance]
         IGS5 --> IGS8[Return to next phase]
         IGS6 --> IGS8
@@ -122,7 +141,7 @@ flowchart TB
 
 ## Workflow Progress Tracking
 
-The Evaluation Protocol defines 13 phases (0-12). Resume reviews involve extensive back-and-forth — user discussion during self-introduction alone can span dozens of messages. Without explicit tracking, later phases are routinely skipped.
+The Evaluation Protocol defines 14 phases (0-13). Resume reviews involve extensive back-and-forth — user discussion during self-introduction alone can span dozens of messages. Without explicit tracking, later phases are routinely skipped.
 
 ### Phase Map
 
@@ -139,29 +158,49 @@ The Evaluation Protocol defines 13 phases (0-12). Resume reviews involve extensi
 | 8 | PS | Problem-Solving Evaluation (depth: signature → detailed → compressed) | `references/problem-solving.md` + `references/experience-mining.md` (conditional) |
 | 9 | TS | Technical Substance Verification (T1-T3) | `references/problem-solving.md` §22-25 |
 | 10 | O | AI Tone Audit | (inline below) |
-| 11 | N | Generate HTML Report + User Approval Gate | (inline below) |
-| 12 | MA | Note Accumulate | `references/note-system.md` |
+| 11 | QG | Per-Bullet Content Quality Gate | `references/content-quality-gate.md` |
+| 12 | N | Generate HTML Report + User Approval Gate | (inline below) |
+| 13 | MA | Note Accumulate | `references/note-system.md` |
+
+### Recognized Opt-Out Keywords
+
+The following keywords are recognized as opt-out signals across all Phases. Use this canonical set everywhere:
+
+| Keyword | Language |
+|---------|----------|
+| "next" | EN |
+| "move on" | EN |
+| "skip" | EN |
+| "this is OK" | EN |
+| "just continue" | EN |
+| "다음으로" | KR |
+| "넘어가자" | KR |
+| "넘어가" | KR |
+| "괜찮아" | KR |
+
+When any of these is detected, end the current interview/loop and proceed to the next phase or fallback guidance.
 
 ### Interview Trigger Precedence
 
-Experience Mining Interview의 트리거 조건이 충족되면:
-1. 인터뷰를 먼저 진행한다 (`Read references/experience-mining.md` 해당 Phase section 참조)
-2. 유저가 opt-out("다음으로", "넘어가자")하면 해당 Phase의 static guidance로 대체한다
+When the Experience Mining Interview trigger condition is met:
+1. Conduct the interview first (refer to `Read references/experience-mining.md` for the relevant Phase section)
+2. If the user opts out (see Recognized Opt-Out Keywords above), replace with the static guidance for that Phase
 
-이 규칙은 모든 Phase의 인터뷰 트리거에 동일하게 적용된다.
+This rule applies equally to all interview triggers across all Phases.
 
 ### Tracking Rules
 
 1. After completing each phase, internally record phase completion. Progress lines are NOT shown to the user.
 2. Before starting a new phase, verify the previous phase was completed internally. If a phase was skipped, complete it first.
 3. When user interaction interrupts the flow (e.g., extended discussion during Phase 2), resume from the next incomplete phase after the interaction concludes. Re-read this Phase Map to locate your position.
-4. Phases 0-10은 평가 결과를 유저에게 출력하지 않는다. 유저 인터랙션은 다음에서만 발생한다:
-   (a) 정보 게이트 — Phase 3 (target position)
-   (b) 경험 발굴 인터뷰 — Phase 2, 4, 5, 7, 8 (트리거 시). 인터뷰 중 유저에게 보여지는 것: 인터뷰 질문 + 간략한 진단 맥락. 보여지지 않는 것: 내부 PASS/FAIL 집계, Completion Checklist, Phase 진행 마커.
-   Phase 11이 유일한 평가 결과 전달 Phase이다.
-5. Phase 11 generates an HTML report file and opens it in the browser. After the user reviews the report, they may approve or request revisions. Note Accumulate (Phase 12) proceeds ONLY after approval.
-6. Phase 12 (Note Accumulate)은 유저가 HTML 리포트를 확인하고 승인한 후에만 진행한다. 승인 전에 노트 저장을 묻지 않는다.
-7. The Completion Checklist is internal — do NOT output it to the user.
+4. Phases 0-10 do not output evaluation results to the user. User interaction occurs only at:
+   (a) Information gate — Phase 3 (target position)
+   (b) Experience mining interviews — Phase 2, 4, 5, 7, 8 (when triggered). What the user sees during interviews: interview questions + brief diagnostic context. What the user does NOT see: internal PASS/FAIL tallies, Completion Checklist, Phase progress markers.
+   Phase 12 is the only phase that delivers evaluation results to the user.
+5. Phase 11 (Per-Bullet Content Quality Gate) loops per section unit until resume-claim-examiner APPROVE or user opt-out.
+6. Phase 12 generates an HTML report file and opens it in the browser. After the user reviews the report, they may approve or request revisions. Note Accumulate (Phase 13) proceeds ONLY after approval.
+7. Phase 13 (Note Accumulate) proceeds only after the user has reviewed and approved the HTML report. Do not prompt for note saving before approval.
+8. The Completion Checklist is internal — do NOT output it to the user.
 
 ---
 
@@ -171,7 +210,7 @@ Load persistent note before starting the review. Previous review sessions' candi
 
 1. Check if `$OMT_DIR/review-resume/` exists
 2. If empty or missing → execute **Auto-Seeding** (parse current resume into initial candidate files)
-3. If exists → scan frontmatter of all candidate files, load `preferences.md`, check `sources/` for cached research
+3. If exists → scan file lists (names only) from all candidate directories, load `preferences.md`, check `sources/` for cached research
 
 Report note status to user:
 ```
@@ -185,12 +224,13 @@ Report note status to user:
 
 **Reference:** Read `references/note-system.md` for full auto-seeding procedure and file format details.
 
-`[Phase 0/12: Note Load ✓]`
+`[Phase 0/13: Note Load ✓]`
 
 ## Phase 1: Pre-Evaluation Research
 
 Before evaluation, perform preparation: analyze the JD (if provided) and research the target company.
 
+- **Step 0**: If JD is provided as a URL — fetch the page content via WebFetch or Playwright MCP before analysis
 - **Step 1**: JD Analysis — extract team, keywords, implicit problems, and what is NOT in the JD
 - **Step 2**: Company Research — core values, tech blog, product/service, career page, recent news
 
@@ -198,11 +238,11 @@ Research results feed into ALL paragraph type selections (A, B, C, D). Check `so
 
 **Reference:** Read `references/pre-evaluation-research.md` for the full research protocol.
 
-`[Phase 1/12: Pre-Evaluation Research ✓]`
+`[Phase 1/13: Pre-Evaluation Research ✓]`
 
 ## Phase 2: Self-Introduction Evaluation
 
-The self-introduction answers: **"어떤 엔지니어인가?"** Each paragraph must reveal a different facet of this answer.
+The self-introduction answers: **"What kind of engineer is this person?"** Each paragraph must reveal a different facet of this answer.
 
 ### Paragraph Types
 
@@ -219,9 +259,9 @@ Evaluate each paragraph against type-specific criteria, then perform global eval
 
 ### Experience Mining Interview
 
-자기소개 절반 이상 FAIL 시 → `Read references/experience-mining.md` Phase 2 section을 참조하여 인터뷰를 진행한다.
+Self-Introduction ANY type FAIL → refer to `Read references/experience-mining.md` Phase 2 section and conduct the interview.
 
-`[Phase 2/12: Self-Introduction Evaluation ✓]`
+`[Phase 2/13: Self-Introduction Evaluation ✓]`
 
 ## Phase 3: Target Position Gate
 
@@ -231,7 +271,7 @@ If the user hasn't stated the target position/company, ASK and HALT. After recei
 
 **Reference:** Type C conditional logic is in `references/self-introduction.md` § "Type C Conditional Evaluation".
 
-`[Phase 3/12: Target Position Gate ✓]`
+`[Phase 3/13: Target Position Gate ✓]`
 
 ## Phase 4: Developer Competency Assessment (C1-C5)
 
@@ -251,15 +291,15 @@ Rate each axis as STRONG / PRESENT / WEAK / ABSENT / N/A with evidence citations
 
 ### Experience Mining Interview
 
-WEAK/ABSENT 축이 career level 기대치에서 EXPECTED/REQUIRED일 때 → `Read references/experience-mining.md` Phase 4 section을 참조하여 인터뷰를 진행한다.
+ANY axis WEAK or ABSENT → refer to `Read references/experience-mining.md` Phase 4 section and conduct the interview.
 
-`[Phase 4/12: Developer Competency Assessment ✓]`
+`[Phase 4/13: Developer Competency Assessment ✓]`
 
 ## Phase 5: Section-Specific Evaluation
 
 Career and problem-solving sections answer fundamentally different questions:
-- **경력**: "What did this person achieve?" — direction and impact. Career bullets are interview **hooks**.
-- **문제해결**: "How does this person approach problems?" — thought process and depth. Entries are engineering thinking **proof**.
+- **Career**: "What did this person achieve?" — direction and impact. Career bullets are interview **hooks**.
+- **Problem-Solving**: "How does this person approach problems?" — thought process and depth. Entries are engineering thinking **proof**.
 
 ### Career Dimensions
 
@@ -287,9 +327,9 @@ Career and problem-solving sections answer fundamentally different questions:
 
 ### Experience Mining Interview
 
-경력 또는 문제해결 기준 FAIL률 > 50% 시 → `Read references/experience-mining.md` Phase 5 section을 참조하여 인터뷰를 진행한다.
+Career or Problem-Solving ANY criterion FAIL → refer to `Read references/experience-mining.md` Phase 5 section and conduct the interview.
 
-`[Phase 5/12: Section-Specific Evaluation ✓]`
+`[Phase 5/13: Section-Specific Evaluation ✓]`
 
 ## Phase 6: 3-Level Pushback Simulation
 
@@ -305,7 +345,7 @@ If a candidate cannot answer all 3 levels, that line will hurt more than help.
 
 **Reference:** Read `references/section-evaluation.md` § "3-Level Pushback Simulation" for the full simulation protocol.
 
-`[Phase 6/12: 3-Level Pushback Simulation ✓]`
+`[Phase 6/13: 3-Level Pushback Simulation ✓]`
 
 ## Phase 7: First-Page Primacy + JD Keyword Matching
 
@@ -315,13 +355,13 @@ Check that the strongest content is on page 1 (the 7.4-second scan zone). If a J
 
 ### Experience Mining Interview
 
-JD 제공됨 AND 3개 이상 키워드 누락 AND 해당 키워드에 대한 노트 후보 없음 → `Read references/experience-mining.md` Phase 7 section을 참조하여 인터뷰를 진행한다.
+JD provided AND 3+ keywords missing AND no note candidates for those keywords → refer to `Read references/experience-mining.md` Phase 7 section and conduct the interview.
 
-`[Phase 7/12: First-Page Primacy + JD Keyword Matching ✓]`
+`[Phase 7/13: First-Page Primacy + JD Keyword Matching ✓]`
 
 ## Phase 8: Problem-Solving Evaluation
 
-All problem-solving entries — regardless of what the resume calls them (시그니처, 문제해결, 기타 프로젝트) — are evaluated under a unified framework. First classify each entry by depth, then apply depth-specific criteria.
+All problem-solving entries — regardless of what the resume calls them (signature, problem-solving, other projects) — are evaluated under a unified framework. First classify each entry by depth, then apply depth-specific criteria.
 
 ### Depth Determination
 
@@ -330,8 +370,8 @@ flowchart TB
     A[Collect all problem-solving entries] --> B{Full P.A.R.R. narrative present?}
     B -->|Yes| C[signature depth → Full P.A.R.R. evaluation]
     B -->|No| D{5+ lines of description?}
-    D -->|Yes| E[detailed depth → 문제해결 6개 기준 + P1,P2,P5]
-    D -->|No| F[compressed depth → 문제해결 6개 기준 + Volume Guide]
+    D -->|Yes| E[detailed depth → Problem-Solving 6 criteria + P1,P2,P5]
+    D -->|No| F[compressed depth → Problem-Solving 6 criteria + Volume Guide]
 
     style C fill:lightyellow
     style E fill:lightgreen
@@ -342,12 +382,12 @@ flowchart TB
 
 | Depth | Base | Additional | Key Focus |
 |-------|------|-----------|-----------|
-| signature | 문제해결 6개 기준 | P1-P5 (all), P6-P8 (mid/senior) | Narrative depth, failure arc, why-chain, stopping judgment |
-| detailed | 문제해결 6개 기준 | P1, P2, P5 only | Narrative exists, at least 1 failure, why-chain present |
-| compressed | 문제해결 6개 기준 | Volume guide (3-5 entries, 3-5 lines each, max 25 lines) | Conciseness, problem→solution→result bullet flow |
+| signature | Problem-Solving 6 criteria | P1-P5 (all), P6-P8 (mid/senior) | Narrative depth, failure arc, why-chain, stopping judgment |
+| detailed | Problem-Solving 6 criteria | P1, P2, P5 only | Narrative exists, at least 1 failure, why-chain present |
+| compressed | Problem-Solving 6 criteria | Volume guide (3-5 entries, 3-5 lines each, max 25 lines) | Conciseness, problem→solution→result bullet flow |
 
 After classifying all entries, output the depth distribution count:
-"Signature N개, Detailed N개, Compressed N개"
+"Signature N, Detailed N, Compressed N"
 Compare against career-level recommendations. If any depth category has 0 entries where the guide expects entries, flag this gap.
 
 **Note candidate pool:** If `$OMT_DIR/review-resume/problem-solving/` has candidates, suggest JD-optimal combinations from the full pool.
@@ -356,47 +396,47 @@ Compare against career-level recommendations. If any depth category has 0 entrie
 
 ### Experience Mining Interview
 
-P.A.R.R. 3개 이상 FAIL 또는 구조 부재 OR 테마 편중 → `Read references/experience-mining.md` Phase 8 section을 참조하여 인터뷰를 진행한다.
+P.A.R.R. ANY dimension FAIL or structure absent OR theme imbalance → refer to `Read references/experience-mining.md` Phase 8 section and conduct the interview.
 
-`[Phase 8/12: Problem-Solving Evaluation ✓]`
+`[Phase 8/13: Problem-Solving Evaluation ✓]`
 
 ## Discovered Candidates Working Set
 
-인터뷰에서 발굴된 경험은 즉시 Working Set에 추가한다. Working Set은 세션 내 임시 저장소이며, Phase 12에서 노트 시스템에 영구 저장된다.
+Experiences discovered during interviews are added to the Working Set immediately. The Working Set is a session-scoped temporary store and is permanently saved to the note system in Phase 13.
 
-Working Set의 템플릿, 라이프사이클, 소비 규칙은 `references/experience-mining.md` § "Discovered Candidates Working Set"을 참조한다.
+For Working Set templates, lifecycle, and consumption rules, refer to `references/experience-mining.md` § "Discovered Candidates Working Set".
 
 ---
 
 ## Phase 9: Technical Substance Verification
 
-Phase 8이 서사 **구조**를 검증했다면(Why 체인이 있는가? 실패 호가 있는가?), Phase 9는 서사 안의 기술적 **실체**를 검증한다(그 Why가 기술적으로 맞는가? 그 선택이 합리적인가?).
+Where Phase 8 verified the **structure** of the narrative (Is there a why-chain? Is there a failure arc?), Phase 9 verifies the technical **substance** within the narrative (Is that why technically sound? Is that choice reasonable?).
 
-Phase 8에서 P.A.R.R. PASS를 받은 엔트리도 Phase 9에서 T1-T3 FAIL이 될 수 있다. 두 Phase는 독립된 관심사이다.
+Entries that received a P.A.R.R. PASS in Phase 8 can still receive T1-T3 FAIL in Phase 9. The two phases address independent concerns.
 
 ### T1-T3 Evaluation Dimensions
 
 | # | Dimension | Question |
 |---|-----------|----------|
-| T1 | 기술적 정합성 | 기술 클레임이 내적으로 일관되고, 명시된 원인이 명시된 결과를 실제로 산출할 수 있는가? |
-| T2 | 선택 합리성 | 각 기술/접근법 선택이 이 문제의 구체적 제약 조건에 근거한 합리적 기반을 갖는가? |
-| T3 | 트레이드오프 진정성 | 명시된 트레이드오프가 이 문제 맥락에서 실제적이고 구체적인가, 교과서 암기인가? |
+| T1 | Technical Coherence | Are the technical claims internally consistent, and can the stated cause actually produce the stated result? |
+| T2 | Choice Rationality | Does each technology/approach choice have a rational basis grounded in the specific constraints of this problem? |
+| T3 | Problem Fidelity | Are the tradeoffs specific and authentic (E3a)? Does the entry reflect the actual surface area of the problem (E3b)? |
 
 ### Depth Gating
 
-- **signature**: T1, T2, T3 전체 적용
-- **detailed**: T1, T2만 적용 (T2는 선택 언급 시)
-- **compressed**: 미적용
+- **signature**: Apply T1, T2, T3 in full
+- **detailed**: Apply T1, T2 only (T2 when a choice is mentioned)
+- **compressed**: Not applied
 
 ### Evaluation Flow
 
-1. Phase 8에서 depth 분류된 각 엔트리에 대해 T1-T3을 순차 적용
-2. FAIL 판정 시 구체적 지적: 어떤 클레임이, 왜 문제인지, 면접에서 어떻게 깨지는지
-3. signature depth 엔트리에서 T1-T3 중 2개 이상 FAIL → HTML 리포트에서 **P0 (반드시 수정)** 분류
+1. For each entry classified by depth in Phase 8, apply T1-T3 sequentially
+2. On FAIL verdict, cite specifically: which claim, why it is problematic, and how it will break under interview scrutiny
+3. 2+ T1-T3 FAILs on a signature-depth entry → classify as **P0 (must fix)** in the HTML report
 
 **Reference:** Read `references/problem-solving.md` §22-25 for full T1-T3 PASS/FAIL examples, depth gating table, output format, and writing guidance trigger.
 
-`[Phase 9/12: Technical Substance Verification ✓]`
+`[Phase 9/13: Technical Substance Verification ✓]`
 
 ---
 
@@ -408,41 +448,223 @@ After all evaluations are complete, perform an AI Tone Audit.
 
 Invoke exactly: `Skill(humanizer)` — request **audit mode** on every text element:
 
-- 자기소개 (about_content)
-- 경력 섹션 각 회사의 bullet lines
-- 문제 해결 섹션 각 엔트리의 description
-- 기술/스터디/기타 섹션
+- Self-Introduction (about_content)
+- Career section bullet lines per company
+- Problem-Solving section description per entry
+- Tech/Study/Other sections
 
 **If AI tone patterns are detected:** Include affected lines and suggested revision direction in the evaluation results.
 **If no AI tone patterns are detected:** Skip this section in the output.
 
-`[Phase 10/12: AI Tone Audit ✓]`
+`[Phase 10/13: AI Tone Audit ✓]`
 
-## Phase 11: Generate HTML Report + User Approval Gate
+## Phase 11: Per-Bullet Content Quality Gate
 
-Compile all evaluation results from Phases 0-10 and write a self-contained HTML file. This is the **only phase that produces user-facing output**. Generate the file, open it, and wait for user approval.
+While Phases 0-10 diagnosed "what the problems are," Phase 11 verifies "have the problems been sufficiently resolved." Each resume section is broken into individual units, and the fix-interview-evaluate loop repeats until the resume-claim-examiner sub-agent issues APPROVE.
 
-### Approval Gate
+### Evaluation Units
+
+The resume-claim-examiner conducts technical interrogation at the granularity of **1 bullet / 1 entry**. It drills deep into individual technical claims, not entire sections.
+
+| Unit Type | Granularity | Example | Notes |
+|-----------|-------------|---------|-------|
+| Self-introduction | 1 unit per Type | Type C (1 entry) | Type C involves tech connections, so it is evaluator-eligible |
+| Career | 1 unit per bullet | "Built Kafka async pipeline, 3x throughput improvement" | Send a single bullet line to the evaluator, not the entire company block |
+| Problem-solving | 1 unit per entry | Entire "Payment System Fault Isolation" episode | Each entry is a single technical narrative — send it as a whole. **Compressed depth excluded** (too short for technical interrogation) |
+| Tech/Study | Not evaluator-eligible | — | Listing a tech stack is not subject to interrogation. Phase 0-10 evaluation is sufficient |
+
+### Examiner Eligibility Rule
+
+Items that contain a technical claim or a problem-solving process → eligible for examiner. No exceptions.
+
+| Section | Examiner Eligible? | Criterion |
+|---------|:---:|------|
+| Self-Introduction Type A | YES if technical claim present | Whether a technology reference like "introduced Redis" exists |
+| Self-Introduction Type B | YES if technical episode present | Technical content in the grounding episode for the engineering philosophy |
+| Self-Introduction Type C | **Always YES** | Company domain–technology connection is the essence |
+| Self-Introduction Type D | YES if technical exploration present | Technical direction verification required |
+| Career bullet | **Always YES** | Every career bullet is an achievement claim |
+| Problem-Solving signature | **Always YES** | Deep technical narrative |
+| Problem-Solving detailed | **Always YES** | Problem-solving process |
+| Problem-Solving compressed | NO | Sentences too short for technical interrogation |
+| Tech/Study | NO | A listing, not a claim |
+
+**Selection criteria:** ALL evaluator-eligible items are subject to the Quality Gate. Eligibility is determined by content type — not by Phase 0-10 P-level findings. Phase 0-10 findings are transmitted as context to the examiner, but do not gate eligibility. Internal "fully PASS" is not a skip condition.
+
+### Quality Gate Loop
+
+For each evaluator-eligible item:
+
+1. Collect Phase 0-10 findings per item unit
+2. **Pre-Examiner Interview** — discuss findings with the user, collect context, reach agreement on alternatives
+3. **Generate 2-3 alternatives** based on interview consensus (safe / high-impact / balanced)
+4. **resume-claim-examiner dispatch** — send original + alternatives package
+5. **APPROVE** → confirm, move to next item
+6. **REQUEST_CHANGES** → additional interview based on FAIL axes → supplement sources → regenerate alternatives → re-dispatch → **infinite loop** until APPROVE or user opt-out
+
+### Quality Gate Flow (Per Item)
+
+```mermaid
+flowchart TB
+    START[Phase 0-10 evaluation complete] --> SELECT[Select ALL evaluator-eligible items]
+    SELECT --> PICK[Pick next item]
+
+    PICK --> PRESENT[Present Phase 0-10 findings to user]
+    PRESENT --> INTERVIEW_PRE[Pre-Examiner Interview\n— discuss findings, collect context,\npropose improvements, reach agreement]
+    INTERVIEW_PRE --> ALT[Generate 2-3 alternatives based on interview]
+    ALT --> DISPATCH[resume-claim-examiner dispatch\n— stateless, full context]
+
+    DISPATCH --> DIAG{Phase A: Interrogate original\nIs it really problematic?}
+    DIAG -->|No problem| APPROVE_ORIG[APPROVE — no revision needed]
+    DIAG -->|Problem confirmed| ALTEVAL{Phase B: Interrogate alternatives\nIs each one sound?}
+
+    ALTEVAL -->|At least 1 passes| APPROVE_ALT[APPROVE — include verified alternative]
+    ALTEVAL -->|All fail| CHANGES[REQUEST_CHANGES\n+ Interview Hints]
+
+    CHANGES --> INTERVIEW_POST[Additional Interview\n— FAIL axes-based, all the way\n4-Stage Bypass Protocol]
+    INTERVIEW_POST --> SOURCE{Source obtained?}
+    SOURCE -->|YES| ALT
+    SOURCE -->|NO: 4-Stage exhausted| BEST[Best alternative with current sources]
+    BEST --> OPTOUT{User Opt-Out?}
+    OPTOUT -->|YES: move on| NEXT
+    OPTOUT -->|NO: continue| DISPATCH
+
+    APPROVE_ORIG --> NEXT{Next item\nexists?}
+    APPROVE_ALT --> NEXT
+
+    NEXT -->|YES| PICK
+    NEXT -->|NO| VERDICT_CHECK[Verdict Tracker verification]
+    VERDICT_CHECK --> DONE[Phase 12: Generate HTML]
+
+    style DISPATCH fill:#e74c3c,stroke:#333,color:#fff
+    style INTERVIEW_PRE fill:#3498db,stroke:#333,color:#fff
+    style INTERVIEW_POST fill:#8e44ad,stroke:#333,color:#fff
+    style DONE fill:#27ae60,stroke:#333,color:#fff
+```
+
+> **Canonical reference:** `references/content-quality-gate.md` Section 5 contains the full Quality Gate loop flow with detailed dispatch rules and post-APPROVE handling.
+
+### Pre-Examiner Interview Protocol
+
+Before dispatching to the examiner, conduct a detailed per-item interview with the user. The purpose of the interview is not to respond to failure but to **prepare for success and reach consensus**.
+
+**Interview procedure (per item):**
+
+1. **Share Findings**: Present Phase 0-10 evaluation results per item — which criteria PASS/FAIL and what is lacking
+2. **Collect Context**: Additional information about the item — what considerations went into it, what tradeoffs were made, what background context exists
+3. **Present Alternatives + Discuss**: Present 2-3 alternatives and discuss the pros and cons of each. Confirm the user's preferences and direction
+4. **Reach Consensus**: After aligning on direction with the user, finalize the alternatives
+
+**Interview rules:**
+- One question per message. Multiple questions are prohibited.
+- Discuss every finding without exception. Do not skip anything on the basis that it is "minor."
+- User gives a vague answer → probe with a clarifying question.
+- User gives an opt-out keyword (see Recognized Opt-Out Keywords) → end the interview for the current item and proceed to examiner dispatch.
+- Even PASS items — propose improvements if there is room. "Barely passing" is still worth discussing.
 
 <critical>
-HTML report를 열고 AskUserQuestion으로 유저에게 리뷰를 요청하라. 유저가 응답할 때까지 어떤 다음 단계도 진행하지 마라. resume-apply 워크플로우 내에서 호출된 경우에도 이 규칙은 동일하게 적용된다.
+There is no escape from this loop without resume-claim-examiner APPROVE.
+The only exception is the user explicitly opting out (see "User Opt-Out" section below for recognized keywords).
+Advancing to the next item or proceeding to Phase 12 without APPROVE is forbidden.
+</critical>
+
+### Mandatory Verdict Tracker
+
+Before entering Phase 12, track the verdict for all evaluator-eligible items internally. If even one entry is blank, entry to Phase 12 is blocked.
+
+| # | Section | Item | Verdict | Loop Count |
+|---|---------|------|---------|------------|
+| 1 | Self-Introduction C | "Data consistency..." | APPROVE / user-opt-out / ??? | N |
+
+If any item has a verdict of `???` → return to that item and re-run the Quality Gate.
+
+### Anti-Pattern: Internal PASS Bypass
+
+<critical>
+Even if all Career/Problem-Solving items came out "fully PASS" in Phases 0-10, evaluator-eligible items must still pass through the Quality Gate. An internal "PASS" does not exempt any item from examiner dispatch. The examiner can find problems from an independent perspective that the internal evaluation missed.
+</critical>
+
+### Evaluator Dispatch Protocol
+
+When sending a single bullet to the resume-claim-examiner, use a format that **exactly matches the Input Format in agents/resume-claim-examiner.md**.
+
+```
+# Technical Evaluation Request
+
+## Candidate Profile
+- Experience: {years} years
+- Position: {position}
+- Target Company/Role: {company} / {role}
+
+## Bullet Under Review
+- Section: {Career > Company A | Problem-Solving > Payment System Fault Isolation | Self-Introduction Type C}
+- Original: "{original text that was the subject of Phase 0-10 evaluation}"
+
+## Technical Context
+- Technologies/approaches mentioned in this bullet: {identified by main session directly from bullet text — e.g., Kafka, Redis, circuit breaker}
+- JD-related keywords: {relevant JD keywords obtained in Phase 1}
+- Phase 0-10 findings: {verbatim P0/P1/P2 findings for this bullet}
+
+## Target Company Context (if available)
+- Company: {company name identified during Phase 1 research}
+- Scale indicators: {TPS, DAU, data volume, etc. researched in Phase 1 Step 3-6}
+- Engineering team size: {if identified}
+- Core values / engineering principles: {core values researched in Phase 1 Step 3-1}
+- Key technical challenges: {technical challenges identified from JD analysis and tech blog}
+- If unavailable: "No specific target — evaluate against big tech standards"
+
+## Proposed Alternatives (2-3)
+{alternatives generated per content-quality-gate.md §3 protocol}
+```
+
+**Key rules:**
+- "Technologies/approaches" in Technical Context are identified directly from the bullet text by the main session. Do not let the evaluator find them on its own.
+- Phase 0-10 findings are transmitted verbatim. Do not summarize.
+- Each evaluation is independent. Do not re-send results from previous evaluations.
+- Target Company Context is populated based on Phase 1 research results. If scale indicators were not obtained in Phase 1, use the "No specific target" fallback.
+
+### User Opt-Out
+
+If the user gives an opt-out keyword (see Recognized Opt-Out Keywords above) → end the current section loop. Status: "user-accepted (evaluator-not-approved)". Include unresolved feedback in the HTML report.
+
+**Reference:** Read `references/content-quality-gate.md` for full protocol including alternative suggestion format, interview loop, HTML format, and whole-resume feedback loop.
+
+`[Phase 11/13: Per-Bullet Content Quality Gate ✓]`
+
+## Phase 12: Generate HTML Report + User Approval Gate
+
+Compile all evaluation results from Phases 0-11 and write a self-contained HTML file. This is the **only phase that produces the final comprehensive evaluation report**. Generate the file, open it, and wait for user approval.
+
+### Approval Gate (Strict Feedback Loop)
+
+<critical>
+Open the HTML report and ask the user to review it. Do not proceed to any next step until the user explicitly declares "no feedback." This rule applies even when called from within a resume-apply workflow.
 </critical>
 
 After opening the HTML report:
+
 1. Tell the user the report is open
-2. Use `AskUserQuestion` to ask the user to review the report and provide feedback
-3. **Do NOT proceed** until the user responds
-4. If the user approves → proceed to Phase 12 (Note Accumulate)
-5. If the user requests revisions → apply changes, regenerate the report, and ask again
+2. Use `AskUserQuestion` to ask: "Please review the report and leave any feedback. If you have no feedback, reply 'none'."
+3. **Evaluate the user's response:**
+
+| Response Type | Examples | Action |
+|---------------|----------|--------|
+| Explicit no feedback | "None", "OK", "No feedback", "Move on" (see Recognized Opt-Out Keywords) | → Proceed to Phase 13 |
+| Ambiguous response | "Looks okay I guess", "Hmm...", "Roughly OK" | → Re-ask: "Is there anything specific you'd like to revise?" |
+| Section-specific feedback | "Self-intro Type C is weak", "Career bullet 2nd..." | → Re-enter Phase 11 Quality Gate for that section |
+| Overall direction feedback | "Overall impact is weak", "Not differentiated enough" | → Re-enter Phase 11 Quality Gate for relevant sections |
+
+4. After applying feedback → regenerate HTML → `open` → loop back to step 2 (infinite loop)
+5. **The only exit condition is "explicit no feedback."**
 
 ### Priority Level Definitions
 
 | Level | Meaning | Criteria |
 |-------|---------|----------|
-| **P0** | Must Fix | 면접에서 즉시 깨짐 — 성과 없음, 인과 없음, 표준을 성과로 제시, cross-section 불일치 |
-| **P1** | Recommended Fix | 면접에서 약점 노출 — 수치 불완전, 역할 불명확, 깊이 부족, AI 톤 감지 |
-| **P2** | Can Improve | 더 좋아질 수 있음 — 표현 개선, JD 키워드 추가, 순서 변경, hook potential 강화 |
-| **P3** | Reference | 스타일 선호 — 어조, 포맷팅, 사소한 표현 차이 |
+| **P0** | Must Fix | Breaks immediately in interview — no achievement, no causation, industry standard presented as achievement, cross-section inconsistency |
+| **P1** | Recommended Fix | Exposes weakness in interview — incomplete metrics, unclear role, insufficient depth, AI tone detected |
+| **P2** | Can Improve | Can be made better — expression improvement, JD keyword addition, reordering, hook potential strengthening |
+| **P3** | Reference | Style preference — tone, formatting, minor expression differences |
 
 ### File Path
 
@@ -454,7 +676,7 @@ HTML_FILE="${OMT_DIR:-$HOME/.omt/global}/reports/review-YYYYMMDD-HHmmss.html"
 - If `$OMT_DIR` is unset, fall back to `~/.omt/global/reports/`.
 - Run `mkdir -p "$(dirname "$HTML_FILE")"` before writing the file.
 - After writing, run `open "$HTML_FILE"` via Bash tool to open it in the browser.
-- Terminal output: 파일 경로만 출력 (e.g., `HTML report: /path/to/review-20260328-153000.html`).
+- Terminal output: print file path only (e.g., `HTML report: /path/to/review-20260328-153000.html`).
 
 ### HTML Escaping
 
@@ -549,6 +771,90 @@ Use the following template as a literal starting point. Fill in all `<!-- ... --
       font-family: monospace;
       white-space: pre-wrap;
     }
+    .alternatives {
+      background: #f8f9fa;
+      border: 1px solid #dee2e6;
+      border-radius: 8px;
+      padding: 16px;
+      margin: 8px 0;
+    }
+    .alternative {
+      border-left: 3px solid #6c757d;
+      padding: 8px 12px;
+      margin: 8px 0;
+      background: #fff;
+      border-radius: 0 4px 4px 0;
+    }
+    .alt-badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-right: 6px;
+    }
+    .alt-safe { background: #d4edda; color: #155724; }
+    .alt-impact { background: #cce5ff; color: #004085; }
+    .alt-balanced { background: #fff3cd; color: #856404; }
+    .alt-recommendation {
+      color: #e67e22;
+      font-weight: 700;
+      font-size: 0.85rem;
+      margin-left: 8px;
+    }
+    .alt-pros { color: #27ae60; font-size: 0.9rem; margin: 4px 0; }
+    .alt-cons { color: #c0392b; font-size: 0.9rem; margin: 4px 0; }
+    .tradeoff-table { margin-top: 12px; font-size: 0.9rem; width: 100%; border-collapse: collapse; }
+    .tradeoff-table th { background: #e9ecef; padding: 6px 12px; text-align: left; }
+    .tradeoff-table td { padding: 6px 12px; border-bottom: 1px solid #dee2e6; }
+    .unresolved-note {
+      background: #fff3cd;
+      border-left: 4px solid #ffc107;
+      padding: 10px 14px;
+      margin: 8px 0;
+      border-radius: 0 4px 4px 0;
+      font-style: italic;
+    }
+    .section-opt-out {
+      background: #fff3cd;
+      border: 1px solid #ffc107;
+      border-radius: 6px;
+      padding: 12px;
+      margin: 8px 0;
+    }
+    .opt-out-badge {
+      display: inline-block;
+      background: #ffc107;
+      color: #212529;
+      padding: 2px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+    .unresolved-feedback {
+      margin-top: 8px;
+    }
+    .fail-axis {
+      border-left: 3px solid #dc3545;
+      padding: 6px 12px;
+      margin: 6px 0;
+      background: #fff;
+    }
+    .axis-label {
+      font-weight: 700;
+      color: #dc3545;
+      font-size: 0.85rem;
+    }
+    .axis-feedback {
+      margin: 4px 0;
+      font-size: 0.9rem;
+    }
+    .axis-hint {
+      color: #6c757d;
+      font-size: 0.85rem;
+      font-style: italic;
+    }
     .resume-line {
       background: #fafafa;
       border: 1px solid #e0e0e0;
@@ -577,12 +883,12 @@ Use the following template as a literal starting point. Fill in all `<!-- ... --
   <strong>Candidate:</strong> <!-- CANDIDATE NAME --><br>
   <strong>Target Position:</strong> <!-- TARGET POSITION --><br>
   <strong>Review Date:</strong> <!-- REVIEW DATETIME --><br>
-  <strong>JD Reference:</strong> <!-- JD REFERENCE OR "없음" -->
+  <strong>JD Reference:</strong> <!-- JD REFERENCE OR "none" -->
 </p>
 
 <!-- C1-C5 SECTION -->
 <h2>Competency Assessment (C1-C5)</h2>
-<p>5점 척도: <span class="rating-strong">STRONG</span> / <span class="rating-present">PRESENT</span> / <span class="rating-weak">WEAK</span> / <span class="rating-absent">ABSENT</span> / <span class="rating-na">N/A</span></p>
+<p>5-point scale: <span class="rating-strong">STRONG</span> / <span class="rating-present">PRESENT</span> / <span class="rating-weak">WEAK</span> / <span class="rating-absent">ABSENT</span> / <span class="rating-na">N/A</span></p>
 <table>
   <thead>
     <tr><th>Competency</th><th>Rating</th><th>Evidence</th></tr>
@@ -601,7 +907,7 @@ Use the following template as a literal starting point. Fill in all `<!-- ... --
 <!-- RESUME SECTIONS -->
 <h2>Section Inline Feedback</h2>
 <!-- Repeat the following block for each resume section in order:
-     자기소개 → 경력 각 회사 → 문제해결 각 엔트리 → 기술스택/기타 -->
+     Self-Introduction → Career per company → Problem-Solving per entry → Tech stack/Other -->
 
 <!--
 <h3><!-- SECTION NAME --></h3>
@@ -611,20 +917,60 @@ For each resume line in this section:
   - If any criterion fails: wrap in .comment-p{0|1|2|3} matching the finding priority
 
 Example — finding with comment:
-<div class="resume-line">저는 백엔드 개발자로 3년간 근무했습니다.</div>
+<div class="resume-line">I worked as a backend developer for 3 years.</div>
 <div class="comment-p0">
   <span class="badge badge-p0">P0 #1</span>
-  <strong>"3년간 근무"는 기간 사실일 뿐, 성과가 없음. 면접관이 기억할 것이 없다.</strong><br>
-  <em>위반:</em> 목표→실행→성과 인과 없음, 차별화 요소 없음<br>
-  <em>면접 시뮬레이션:</em> "그래서 뭘 하셨나요?" — 답이 이 문장 안에 없음
-  <div class="suggestion">수정안: 3년간 B2B SaaS 결제 시스템을 설계·운영하며, 결제-주문 불일치를 0건으로 만들었습니다.</div>
+  <strong>"Worked for 3 years" is a duration fact only — no achievement. Nothing for the interviewer to remember.</strong><br>
+  <em>Violation:</em> No goal→action→outcome causation, no differentiator<br>
+  <em>Interview simulation:</em> "So what did you actually do?" — the answer is not in this sentence
+  <div class="suggestion">Revised: Designed and operated a B2B SaaS payment system over 3 years, reducing payment-order discrepancies to zero.</div>
 </div>
 
 Example — all-PASS line:
-<div class="resume-line">결제-주문 불일치를 0건으로 달성, 월 평균 클레임 12건 → 0건 전환.</div>
+<div class="resume-line">Achieved zero payment-order discrepancies, converting an average of 12 monthly claims to 0.</div>
 <div class="comment-strength">
   <span class="badge badge-strength">PASS</span>
-  6개 기준 전부 통과 — 목표·실행·성과 인과 명확, 수치 검증 가능
+  All 6 criteria passed — goal/action/outcome causation clear, metrics verifiable
+</div>
+
+Example — finding with multiple alternatives:
+<div class="resume-line">Built a Kafka-based async pipeline.</div>
+<div class="comment-p1">
+  <span class="badge badge-p1">P1 #3</span>
+  <strong>No explanation of why Kafka or what tradeoffs were made.</strong><br>
+  <em>Violation:</em> Tradeoff authenticity (E3) — no basis for technology choice<br>
+  <em>Interview simulation:</em> "Why Kafka instead of RabbitMQ?" — no answer
+  <div class="alternatives">
+    <h4>Alternatives</h4>
+    <div class="alternative">
+      <div><span class="alt-badge alt-safe">Alt 1: Safe</span><span class="alt-recommendation">★ Recommended</span></div>
+      <div class="alt-content">Needed ordering guarantees for 100K daily events and chose Kafka; partition-based ordering was the decisive factor over RabbitMQ.</div>
+      <div class="alt-pros">Pros: Minimal change, technology choice clearly justified</div>
+      <div class="alt-cons">Cons: Impact is weak, low differentiation</div>
+    </div>
+    <div class="alternative">
+      <div><span class="alt-badge alt-impact">Alt 2: High Impact</span></div>
+      <div class="alt-content">Processing 100K daily events while balancing the tradeoff between partition ordering and throughput, we prioritized ordering and capped partitions at 3, accepting 200ms processing latency.</div>
+      <div class="alt-pros">Pros: Tradeoff is specific, deeper interview signal ↑</div>
+      <div class="alt-cons">Cons: Metrics verification required — backfires if absent</div>
+    </div>
+    <table class="tradeoff-table">
+      <tr><th>Criterion</th><th>Alt 1</th><th>Alt 2</th></tr>
+      <tr><td>Interview safety</td><td>★★★</td><td>★★☆</td></tr>
+      <tr><td>Differentiation</td><td>★★☆</td><td>★★★</td></tr>
+      <tr><td>Source required</td><td>Low</td><td>High</td></tr>
+    </table>
+  </div>
+</div>
+
+Example — user-accepted but evaluator-not-approved:
+<div class="resume-line">Migrated to MSA and shortened the deployment cycle.</div>
+<div class="comment-p1">
+  <span class="badge badge-p1">P1 #5</span>
+  <strong>No concrete tradeoffs from the MSA migration</strong>
+  <div class="unresolved-note">
+    ⚠ Unresolved: resume-claim-examiner issued FAIL on E3 (Problem Fidelity) and E4 (Scale-Appropriate Engineering). User chose to proceed with current content.
+  </div>
 </div>
 -->
 
@@ -646,8 +992,8 @@ Example — all-PASS line:
     <tr>
       <td><span class="badge badge-p0">P0</span></td>
       <td>1</td>
-      <td>자기소개</td>
-      <td>임팩트 부재 — 성과 없는 기간 서술</td>
+      <td>Self-Introduction</td>
+      <td>No impact — describes only duration with no achievement</td>
     </tr>
     -->
   </tbody>
@@ -661,9 +1007,9 @@ Example — all-PASS line:
 </html>
 ```
 
-`[Phase 11/12: Generate HTML Report ✓]`
+`[Phase 12/13: Generate HTML Report ✓]`
 
-## Phase 12: Note Accumulate
+## Phase 13: Note Accumulate
 
 After the user has reviewed the HTML report and approved it, accumulate insights from this session into persistent note. Save after user confirmation.
 
@@ -679,7 +1025,7 @@ After the user has reviewed the HTML report and approved it, accumulate insights
 Show accumulation summary and wait for user confirmation before writing files:
 
 ```
-[Note Accumulate — Phase 12]
+[Note Accumulate — Phase 13]
 
 New candidates:
   + problem-solving/search-latency-optimization.md
@@ -698,11 +1044,11 @@ Save? (y/n)
 
 **Reference:** Read `references/note-system.md` § "Note Accumulate" for full accumulation rules.
 
-`[Phase 12/12: Note Accumulate ✓]`
+`[Phase 13/13: Note Accumulate ✓]`
 
 ## Completion Checklist (Internal — do NOT output to user)
 
-Before delivering Phase 11 output, verify every phase was completed or has a valid skip reason. Track with DONE or SKIPPED status:
+Before delivering Phase 12 output, verify every phase was completed or has a valid skip reason. Track with DONE or SKIPPED status:
 
 ```
 [Review Completion Checklist — INTERNAL]
@@ -713,19 +1059,20 @@ Before delivering Phase 11 output, verify every phase was completed or has a val
 - [ ] Phase 3: Target Position Gate
 - [ ] Phase 4: Developer Competency Assessment (C1-C5)
 - [ ] Phase 4: Experience Mining Interview (DONE/SKIPPED/N/A)
-- [ ] Phase 5: Section-Specific Evaluation (경력 6개 기준 / 문제해결 6개 기준)
+- [ ] Phase 5: Section-Specific Evaluation (Career 6 criteria / Problem-Solving 6 criteria)
 - [ ] Phase 5: Experience Mining Interview (DONE/SKIPPED/N/A)
 - [ ] Phase 6: 3-Level Pushback Simulation
 - [ ] Phase 7: First-Page Primacy + JD Keyword Matching
 - [ ] Phase 7: Experience Mining Interview (DONE/SKIPPED/N/A)
 - [ ] Phase 8: Problem-Solving Evaluation (depth: signature → detailed → compressed)
 - [ ] Phase 8: Experience Mining Interview (DONE/SKIPPED/N/A)
-- [ ] Phase 9: Technical Substance Verification (T1-T3: 기술적 정합성, 선택 합리성, 트레이드오프 진정성)
+- [ ] Phase 9: Technical Substance Verification (T1-T3: Technical Coherence, Choice Rationality, Problem Fidelity)
 - [ ] Phase 10: AI Tone Audit (MUST invoke Skill(humanizer) — manual scan ≠ DONE)
-- [ ] Phase 11: Generate HTML Report + User Approval Gate
-- [ ] Phase 12: Note Accumulate (candidate/preference persistence — user confirmation required)
+- [ ] Phase 11: Per-Bullet Content Quality Gate (resume-claim-examiner APPROVE or user opt-out required for each section unit)
+- [ ] Phase 12: Generate HTML Report + User Approval Gate (infinite loop until feedback reaches 0)
+- [ ] Phase 13: Note Accumulate (candidate/preference persistence — user confirmation required)
 ```
 
-A phase is SKIPPED only when its precondition is not met (e.g., Phase 8 specific depth skipped because no entries at that depth exist). Phases 0, 10, 11 have NO precondition — always required. Phase 12 has a strict precondition: User Approval in Phase 11. Phase 12 counts as DONE even if the user declines to save.
+A phase is SKIPPED only when its precondition is not met (e.g., Phase 8 specific depth skipped because no entries at that depth exist). Phases 0, 10, 11, 12 have NO precondition — always required. Phase 13 has a strict precondition: User Approval in Phase 12. Phase 13 counts as DONE even if the user declines to save.
 
-If any phase shows SKIPPED without a valid precondition reason, complete it before delivering Phase 11 output.
+If any phase shows SKIPPED without a valid precondition reason, complete it before delivering Phase 12 output.
