@@ -2,7 +2,7 @@
 name: sisyphus
 description: Use when orchestrating complex multi-step tasks requiring delegation, parallelization, or systematic completion verification - especially when tempted to do everything yourself or ask user codebase questions
 hooks:
-  SessionStart:
+  UserPromptSubmit:
     - hooks:
         - type: command
           command: "bun run $CLAUDE_PROJECT_DIR/.claude/skills/sisyphus/hooks/skill-catalog/index.ts"
@@ -241,16 +241,18 @@ Apply **MECE decomposition** as a lightweight sanity check: tasks should be **Mu
 | Task mixes read + write work | Read yourself, delegate writes |
 | Two tasks modify same function/module | MECE violation — merge or split by responsibility |
 | Completed tasks wouldn't cover a requirement | Coverage gap — add missing task |
-| Task touches 4+ unrelated file groups | Atomicity violation — split by module group |
+| Task touches 4+ files | Atomicity violation — split by responsibility (1 concern per task) |
 
 **RULE**: If you can't write a single-sentence delegation prompt, the task isn't atomic enough.
+
+**Vertical Slice Rule**: Split by responsibility/behavior, NOT by architectural layer. "Task 1: all entities, Task 2: all repositories" creates sequential dependencies. Prefer "Task 1: User entity + repo + test, Task 2: Order entity + repo + test." Exception: shared foundation tasks (types, interfaces, configs) may be extracted as early tasks to unblock parallel work.
 
 ### Atomicity Quick-Check
 
 Before delegating, verify each task passes all three conditions:
 
-1. **Is the complexity moderate or below?** — Can a single agent understand and implement it without needing broader architectural context?
-2. **Does it touch 3 or fewer logically distinct file groups?** — A file group is a set of closely related files (e.g., a module and its tests).
+1. **Does it address a single concern?** — One task = one module/concern. If 2+ unrelated concerns are bundled, split it.
+2. **Does it touch 1-3 files?** — 4+ files = not atomic. Split by responsibility so each task stays within the 1-3 file limit.
 3. **Is it single-delegation completable?** — Can sisyphus-junior finish the entire task in one pass without handing back partial work?
 
 **All YES** → the task is atomic. Delegate it.
@@ -273,6 +275,8 @@ Before entering the Task Execution Loop, classify every task:
 | No dependency | Task A edits `foo.ts`, Task B edits `bar.ts` | Parallel dispatch |
 
 **RULE**: Default to parallel. Only serialize when dependencies or file conflicts exist.
+
+**Wave density diagnostic**: If a parallel group has fewer than 3 tasks (excluding dependency-bottleneck groups), re-examine whether tasks can be split further. Target 5-8 tasks per parallel batch for maximum throughput.
 
 ---
 
@@ -362,7 +366,7 @@ When delegating to sisyphus-junior, include all 7-section categories:
 - Prior task results: [dependencies]
 
 ## 7. MANDATORY SKILLS
-- Skill(skill: "[name]"): [when to invoke, what it provides]
+- [skill-name]
 - [May be empty if no skills are relevant to this task]
 ```
 
@@ -403,8 +407,7 @@ Rate limit: 100 requests per minute per IP. Return 429 Too Many Requests when ex
 - Prior task results: Auth middleware was refactored in Task #3, middleware chain order matters
 
 ## 7. MANDATORY SKILLS
-- Skill(skill: "superpowers:test-driven-development"): Invoke BEFORE writing rate-limiter.ts.
-  Write tests for under-limit, at-limit, over-limit FIRST, then implement to make them pass.
+- superpowers:test-driven-development
 ```
 
 ### Prompt Quality Check
