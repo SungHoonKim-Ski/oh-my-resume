@@ -48,11 +48,11 @@ $OMT_DIR/review-resume/
 
 "Signature project", "problem-solving", and "other projects" are not separate categories. All of them are detailed narratives that show **how this person solves problems** — they differ only in **depth**.
 
-| Depth | Purpose | Length | Included Elements |
-|-------|---------|--------|-------------------|
-| `signature` | Deepest problem-solving narrative | No limit | Full P.A.R.R. (attempts → failures → validation → retrospective) |
-| `detailed` | Major problem-solving within career | 5–10 lines | Problem → approach → result, 1–2 failed attempts |
-| `compressed` | Supporting projects, concise evidence | 3–5 bullet lines | 1-line problem + 1–2 line solution + 1-line outcome |
+All candidate entries are evaluated uniformly — depth is not pre-assigned. Evaluation rules:
+
+- **5+ line entries**: Included in candidate evaluation. Each entry is assessed on P.A.R. structure (attempts → failures → validation).
+- **1 kick entry per resume**: The single strongest entry gets deeper treatment — expanded narrative, full failure chain, concrete validation evidence.
+- **Under 5 lines**: Too thin to evaluate independently; merge with a related entry or expand before adding to the pool.
 
 Maintain **2–3× more candidates** in the pool than the number actually used in the resume. This allows swapping combinations depending on the JD.
 
@@ -78,7 +78,7 @@ tags: [payment, concurrency, MVCC]
 |-------|---------|
 | `tags` | Keywords for JD matching and search |
 
-The candidate body contains the narrative content directly. Depth (signature/detailed/compressed) is determined at evaluation time from the content structure, not stored as metadata.
+The candidate body contains the narrative content directly. Entry depth is determined at evaluation time from the content structure, not stored as metadata: entries with 5+ lines are evaluated as P.A.R. candidates; entries under 5 lines are moved to career bullets or expanded before entering the pool.
 
 ---
 
@@ -104,13 +104,12 @@ Three sections are required: **Expression Style**, **Judgment Criteria**, **Feed
 
 ---
 
-## 5. Career-Level Depth Distribution Guide
+## 5. Career-Level Entry Recommendations
 
-| Career Level | Recommended Composition | Rationale |
+| Career Level | Recommended Entries | Rationale |
 |---|---|---|
-| Junior (0–3 years) | 1 signature + 2 detailed per career entry | Must prove CS depth and learning velocity in detail |
-| Mid-level (3–7 years) | 1 signature + 1–2 detailed + 3–5 compressed | Use signature for trade-off judgment, compressed for breadth |
-| Senior (7+ years) | 1 signature + 3–5 compressed | One signature is enough for business impact. Keep the rest concise |
+| Junior (<7 years) | 5–8 entries total, 1 kick entry for deeper treatment | Establish breadth of experience; one entry receives full P3 elaboration |
+| Senior (7+ years) | 5–8 entries total, 1 kick entry for deeper treatment | Business impact focus; one entry receives full P3 elaboration |
 
 ---
 
@@ -141,8 +140,6 @@ Report the load result to the user:
 - Research Cache: {company name} found / none
 ```
 
-`[Phase 0/13: Note Load ✓]`
-
 ---
 
 ## 7. Auto-Seeding (First Run)
@@ -152,10 +149,7 @@ Run only when note is empty. Parse the current resume to auto-generate the initi
 1. Read `_config.yml` (or the resume file on the current branch)
 2. **Self-introduction**: Classify each paragraph as Type A/B/C/D and create files in `self-introduction/`
 3. **Career**: Create one file per bullet in `career/` (filename: company-item in kebab-case)
-4. **Problem-solving / projects**: Create one file per project entry in `problem-solving/`
-   - Items marked as "signature" in the resume → `depth: signature`
-   - Items with detailed narrative → `depth: detailed`
-   - Items in 3–5 bullet form → `depth: compressed`
+4. **Problem-solving / projects**: Create one file per problem-solving/project entry
 5. Create `preferences.md` as a blank template
 6. Report seeding results to the user: "Note initialized. N candidates registered based on the current resume."
 
@@ -202,5 +196,3 @@ Save? (y/n)
 ```
 
 If the user confirms, create or modify the files. If declined, do not accumulate.
-
-`[Phase 13/13: Note Accumulate ✓]`

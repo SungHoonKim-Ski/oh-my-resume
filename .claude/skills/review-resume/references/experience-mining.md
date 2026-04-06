@@ -49,7 +49,7 @@ Explore sources hidden in routine work. Mine from what was done repeatedly, not 
 
 Example: "Was there anything in your daily tasks where you thought 'this is something I make sure to handle carefully'?", "Was there anything your team tended to ask specifically you about?"
 
-> **Cross-reference:** Phase 11 (Per-Bullet Content Quality Gate) extends this protocol for source acquisition interviews when resume-claim-examiner returns REQUEST_CHANGES. Details: `references/content-quality-gate.md` §4 Interview Loop Protocol.
+> **Cross-reference:** Phase 8 (Per-Bullet Content Quality Gate) extends this protocol for source acquisition interviews when resume-claim-examiner returns REQUEST_CHANGES. Details: `references/content-quality-gate.md` §4 Interview Loop Protocol.
 
 ---
 
@@ -268,13 +268,13 @@ Source secured → Record in Discovered Candidates → Mark as a reinforcement c
 
 ## Problem-Solving
 
-**Trigger Context:** Any P.A.R.R. dimension FAIL, or missing structure, or theme imbalance
+**Trigger Context:** Any P.A.R. dimension FAIL, or missing structure, or theme imbalance
 
 **Diagnostic Context Examples:**
 
 GOOD: "I think there are some experiences that could add more depth to your problem-solving section — I'd like to ask about a few of them."
 
-BAD (internal metric exposure): "P2 no failure arc, P5 why-chain stopped at step 1"
+BAD (internal metric exposure): "P2 no failure arc, P4 why-chain stopped at step 1"
 
 **Target Topics:**
 
@@ -284,7 +284,7 @@ BAD: "Do you have any failure experiences?"
 
 GOOD: "Was there a moment when the first approach you tried on this problem didn't work? Tell me what went wrong and how you changed direction for the next attempt."
 
-Why-chain (P5):
+Why-chain (P4):
 
 BAD: "Why did you choose that technology?"
 
@@ -306,7 +306,7 @@ GOOD: "Your problem-solving section currently focuses heavily on {theme}. Was th
 No source after Stage 4 → switch to problem-solving.md §15 Writing Guidance
 
 **Source Acquisition Path:**
-Source secured → Record in Discovered Candidates → Mark as a P.A.R.R. reinforcement candidate or a candidate for a new entry
+Source secured → Record in Discovered Candidates → Mark as a P.A.R. reinforcement candidate or a candidate for a new entry
 
 ### Entanglement Extraction (Problem-Solving sub-protocol)
 
@@ -357,7 +357,7 @@ GOOD: "처음에 계획했던 것과 실제로 만든 것을 비교하면 — �
 
 ### Example A: Developer Competency Assessment C2 — Source discovery via Stage 2 bypass, then Problem-Solving Evaluation forward-feed
 
-**Context:** Mid-level backend developer, C2 (operations/monitoring) ABSENT.
+**Context:** Junior backend developer, C2 (operations/monitoring) ABSENT.
 
 Agent: "Looking at your career history, your deployment and development experience comes through clearly — would it be okay if I asked about some experiences to strengthen the service operations side? Did you have a routine for checking service health directly after a deployment?"
 
