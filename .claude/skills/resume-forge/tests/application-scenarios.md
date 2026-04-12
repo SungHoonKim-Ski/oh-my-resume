@@ -18,6 +18,16 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 | A-10 | Mining continues in Loop 1 | Cross-phase mining | 문제 작성 중 추가 마이닝 필요 시 |
 | A-11 | Anti-pattern: structured choices | Free-form principle | AskUserQuestion에서 선택지 강제하지 않음 |
 | A-12 | Anti-pattern: blind acceptance | Critical partner principle | 유저 의견에 반박 + 대안 제시 |
+| A-13 | Guided interview — one question + directions | Guided Interview principle | 턴당 질문 1개 + 방향 제시 2-3개 준수 |
+| A-14 | Loop 2 — examiner fail + retry | Loop 2 feedback loop | E3b < 0.8 시 피드백 + 대안 → 재토론 → 재제출 |
+| A-15 | Anti-pattern: show fragments | Show full text principle | 조각이 아닌 전체 엔트리 보여주기 |
+| A-16 | Anti-pattern: direct scoring | Delegate scoring principle | examiner 위임 없이 자체 채점 금지 |
+| A-17 | Anti-pattern: E3b without solution | Examiner invocation guard | 해결 전략 없이 E3b 평가 시도 금지 |
+| A-18 | Anti-pattern: technical terms w/o verification | Term alignment | 기술 용어 정의 합의 없이 사용 금지 |
+| B-1 | Session Recovery — forge-references 스캔 | Context Bootstrap | 세션 복구 시 forge-references 먼저 스캔 |
+| B-2 | Session Recovery — 관련 reference 적극 읽기 | Context Bootstrap | 현재 작업 시나리오 관련 reference 전문 읽기 |
+| B-3 | Phase 0 — problem-solving/ dedup 참조 | Phase 0 Setup | 기존 완성 항목과 중복 방지 |
+| B-4 | Session cleanup — all scenarios done | Cleanup behavior | 모든 loop2 passed 시 state 파일 삭제 |
 
 ---
 
@@ -136,12 +146,17 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 
 **Expected behavior:**
 1. draft 파일의 문제 정의를 보여줌
-2. 유저에게 해결 경험 질문: "실제로 어떻게 접근했어?", "기각한 대안은?", "트레이드오프는?"
+2. 해결 전략 인터뷰 시작 — 첫 질문 1개 + 후보 방향 2-3개 제시: "실제로 어떻게 접근했어? Saga 패턴으로 명시적으로 구현한 건지, 아니면 이벤트 체인 + 수동 보정 방식이었는지가 기술적 깊이를 좌우할 것 같아. 아니면 아예 다른 방향이었으면 알려줘"
 3. 유저 응답을 기반으로 해결 전략 초안 작성
 4. 전체 엔트리(문제+과제+해결+결과) 보여주고 토론
 
 **Verification:**
-- [ ] 해결 전략 인터뷰 3가지 포인트 준수 (실제 경험 vs 창작, 기각된 대안, 트레이드오프)
+- [ ] Solution interview protocol 5-bullet 준수:
+  - [ ] 턴당 질문 1개 (batch 안 함)
+  - [ ] 질문마다 2-3개 후보 방향/프레이밍 제시
+  - [ ] 실제 경험 vs 창작 검증
+  - [ ] 기각된 대안 + 이유 추출
+  - [ ] 트레이드오프 + 수용 근거 추출
 - [ ] 전체 엔트리를 보여준 뒤 토론 (해결만 따로 보여주지 않음)
 
 ---
@@ -220,3 +235,176 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 - [ ] "좋은 생각이에요"로 수용하지 않음
 - [ ] 기술적 근거로 반박
 - [ ] 대안을 함께 제시
+
+---
+
+## B-1: Session Recovery — forge-references 스캔
+
+**Context:** 유저가 새 세션에서 "이력서 재료 이어서 하자"라고 요청. state JSON에 9개 시나리오(loop1 전부 passed, loop2는 c1만 passed). forge-references/에 3개 파일 존재:
+- `mineiss-consignment-model.md` (마인이스 위탁판매 비즈니스 모델 분석)
+- `mineiss-tech-stack.md` (마인이스 기술 스택 — Kotlin, Spring, Kafka 등)
+- `aswemake-mart-system.md` (애즈위메이크 마트 시스템 구조)
+
+**Expected behavior:**
+1. State JSON 로드 → 현황 파악
+2. forge-references/ 목록 확인 (ls)
+3. 각 파일의 앞부분을 읽어서 어떤 도메인/내용을 다루는지 파악
+4. Loop 2 작업 시작 전에 도메인 배경 지식 확보
+
+**Verification:**
+- [ ] state JSON 로드 후 바로 Loop 진입하지 않음
+- [ ] forge-references/ 파일 목록을 먼저 확인
+- [ ] 각 파일 앞부분을 읽어서 내용 파악
+- [ ] 도메인 배경을 확보한 뒤에 Loop 2 진입
+
+---
+
+## B-2: Session Recovery — 관련 reference 적극 읽기
+
+**Context:** B-1과 동일 상태. c2(위탁판매 반품 워크플로우)부터 Loop 2 시작. forge-references/에 `mineiss-consignment-model.md`가 위탁판매 비즈니스 모델을 상세히 설명.
+
+**Expected behavior:**
+1. c2가 위탁판매 반품 관련 → `mineiss-consignment-model.md`가 직접 관련됨을 판단
+2. 해당 파일을 헤더만이 아니라 전문 읽기
+3. 읽은 내용을 기반으로 c2 솔루션 인터뷰에서 깊이 있는 질문
+
+**Verification:**
+- [ ] 관련 reference를 적극적으로 전문 읽기 (lazy하게 미루지 않음)
+- [ ] 읽은 도메인 지식이 인터뷰 질문에 반영됨
+- [ ] 비관련 파일(aswemake-mart-system.md)은 헤더 스캔으로 충분
+
+---
+
+## B-3: Phase 0 — problem-solving/ dedup 참조
+
+**Context:** 유저가 새 세션에서 "이력서 재료 좀 더 추가하자"라고 요청. problem-solving/에 이미 완성된 항목 2개 존재:
+- `attribute-inference-pipeline.md` (상품 속성 추론 파이프라인)
+- `return-workflow-automation.md` (위탁판매 반품 워크플로우)
+
+**Expected behavior:**
+1. Phase 0에서 problem-solving/ 스캔
+2. 이미 완성된 항목의 주제/도메인 파악
+3. Source mining 시 기존 항목과 중복되는 시나리오를 제안하지 않음
+4. 기존 항목과 차별화되는 새로운 각도의 시나리오 제안
+
+**Verification:**
+- [ ] problem-solving/ 기존 항목을 스캔하고 내용 파악
+- [ ] 중복 시나리오를 제안하지 않음 (예: "상품 속성 추론" 재제안 안 함)
+- [ ] 기존 항목과의 차별점을 의식한 새 시나리오 제안
+
+---
+
+## A-13: Guided Interview — 한 번에 하나, 방향 제시와 함께
+
+**Context:** Loop 2에서 C2 반품 워크플로우의 해결 전략을 인터뷰 중. 4가지 기술적 포인트(귀책 판정, Saga, 순환 의존, 위탁자 거부)를 다뤄야 하는 상황.
+
+**Bad behavior:** "다음 4가지를 알려주세요: (1) 귀책 판정을 어떻게 자동화했는지, (2) 5개 시스템 간 부분 실패를 어떤 패턴으로 처리했는지, (3) 순환 의존 문제를 어떤 구조로 끊었는지, (4) 위탁자 거부 시나리오는 어떻게 처리했는지"
+
+**Good behavior:**
+1. 첫 턴: "귀책 판정을 어떻게 처리했어? 규칙 기반 자동화를 했는지, 아니면 운영 프로세스 개선이었는지가 기술적 깊이를 좌우할 것 같아. 예를 들어 LLM 재검수 결과 비교 → 자동 판별 같은 구조면 강할 것 같은데"
+2. 유저 답변 후: 답변 내용을 반영한 follow-up 질문 (다음 포인트로 이동)
+3. 각 턴마다 2-3개 후보 방향/프레이밍을 함께 제시
+
+**Expected behavior:**
+1. 4개 포인트를 한 번에 묻지 않음
+2. 첫 번째 포인트에 대해 질문 + 후보 방향 제시
+3. 유저 답변 후, 답변 내용을 반영하여 다음 포인트로 이동
+4. 각 질문에 "이런 방식이면 강할 것 같다" 같은 코칭 방향 포함
+
+**Verification:**
+- [ ] 한 턴에 질문 1개만 존재 (여러 번호의 질문 나열 안 함)
+- [ ] 질문과 함께 2-3개 후보 방향/프레이밍 제시
+- [ ] follow-up이 이전 답변 내용을 반영
+- [ ] 열린 질문 형태 (선택지 강제 아님)
+
+---
+
+## A-14: Loop 2 — Examiner Fail + Retry
+
+**Context:** C3 정산 시스템 시나리오의 전체 엔트리를 examiner에게 제출. E3b 0.62 반환.
+
+**Expected behavior:**
+1. examiner 피드백을 유저에게 보여줌
+2. 낮은 점수의 원인 분석 + 대안 제시 ("해결 전략에서 기각한 대안과 이유가 빠져있어서 점수가 낮은 것 같아. 이런 방향으로 보강하면 어떨까")
+3. 유저와 재토론 (Solution interview protocol 준수 — 한 번에 하나씩)
+4. 수정된 전체 엔트리를 다시 examiner에게 제출
+5. state는 `pending` 유지 (fail로 바꾸지 않음)
+
+**Verification:**
+- [ ] 피드백만 보여주고 끝내지 않음 (대안 제시 필수)
+- [ ] 재토론 시에도 Solution interview protocol 준수 (1 question + directions per turn)
+- [ ] 유저에게 직접 채점하지 않음 (examiner 위임)
+- [ ] 재제출 루프가 올바르게 동작
+- [ ] state를 "failed"로 바꾸지 않음 (pending 유지)
+
+---
+
+## A-15: Anti-Pattern — Show Fragments
+
+**Context:** Loop 2에서 유저와 해결 전략을 완성한 뒤, examiner 제출 전 검토 단계.
+
+**Bad behavior:** "해결 전략 부분만 보여드릴게요:" → 해결 전략만 단독 표시
+**Good behavior:** 전체 엔트리(문제 정의 + 기술 과제 + 해결 전략 + 결과)를 한 번에 표시한 뒤 토론
+
+**Verification:**
+- [ ] 해결 전략만 따로 보여주지 않음
+- [ ] 전체 엔트리(problem + challenges + solution + results)를 한 번에 표시
+- [ ] "Show full text" 원칙 명시적 준수
+
+---
+
+## A-16: Anti-Pattern — Direct Scoring
+
+**Context:** Loop 1에서 문제 정의를 유저와 완성. examiner 제출 직전.
+
+**Bad behavior:** "이 정도면 Causal Chain 0.7은 넘을 것 같아요. 저장할게요."
+**Good behavior:** "문제 정의가 완성됐으니 examiner에게 제출해서 Causal Chain Depth를 평가받을게."
+
+**Verification:**
+- [ ] 자체적으로 점수를 예측하거나 판단하지 않음
+- [ ] 반드시 tech-claim-examiner 서브에이전트 호출
+- [ ] examiner 결과만으로 pass/fail 판정
+
+---
+
+## A-17: Anti-Pattern — E3b Without Solution Strategy
+
+**Context:** Loop 2에서 C4 draft를 골랐지만, 유저가 해결 전략을 아직 말하지 않은 상태. 문제 정의만 있음.
+
+**Bad behavior:** "문제 정의가 충분히 좋으니 바로 examiner에게 E3b 평가를 받아볼게요."
+**Good behavior:** "해결 전략이 아직 없어서 E3b 평가를 받을 수 없어. 먼저 어떻게 해결했는지 이야기해줄래?"
+
+**Verification:**
+- [ ] 해결 전략 없이 E3b 평가를 시도하지 않음
+- [ ] 해결 전략 인터뷰를 먼저 진행
+- [ ] "Causal Chain works with problem-only, but E3b requires solution strategy" 원칙 준수
+
+---
+
+## A-18: Anti-Pattern — Technical Terms Without Verification
+
+**Context:** Loop 2 인터뷰 중. 유저가 "읽기 성능은 CQRS로 개선했어"라고 답변.
+
+**Bad behavior:** "CQRS로 읽기 성능을 개선했군요. 그럼 다음으로..." (정의 검증 없이 수용)
+**Good behavior:** "CQRS라고 하면 커맨드와 쿼리의 책임을 분리하는 아키텍처 패턴인데, 읽기 성능 개선 맥락에서 어떻게 적용한 건지 좀 더 설명해줄래? 읽기 전용 모델을 별도로 두고 이벤트로 동기화한 건지, 아니면 단순히 읽기 전용 레플리카를 분리한 건지 확인하고 싶어. 두 경우는 기술적 깊이가 많이 달라."
+
+**Verification:**
+- [ ] 기술 용어를 그대로 수용하지 않음
+- [ ] 용어의 정확한 의미를 유저와 합의
+- [ ] 용어 오용 시 올바른 정의 + 대안 패턴 제시
+
+---
+
+## B-4: Session Cleanup — 모든 시나리오 완료 시
+
+**Context:** 9개 시나리오 전부 `loop2.status == "passed"`. 마지막 시나리오를 problem-solving/에 저장한 직후.
+
+**Expected behavior:**
+1. 모든 시나리오 완료 상태 확인
+2. state 파일 (`$OMT_DIR/state/resume-forge-{sessionId}.json`) 삭제
+3. 유저에게 완료 보고
+
+**Verification:**
+- [ ] 모든 loop2 passed 확인 후 state 파일 삭제
+- [ ] state 파일을 남겨두지 않음
+- [ ] drafts/와 problem-solving/ 파일은 유지 (삭제 안 함)
