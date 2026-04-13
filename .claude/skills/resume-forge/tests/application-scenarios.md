@@ -28,6 +28,16 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 | B-2 | Session Recovery — 관련 reference 적극 읽기 | Context Bootstrap | 현재 작업 시나리오 관련 reference 전문 읽기 |
 | B-3 | Phase 0 — problem-solving/ dedup 참조 | Phase 0 Setup | 기존 완성 항목과 중복 방지 |
 | B-4 | Session cleanup — all scenarios done | Cleanup behavior | 모든 loop2 passed 시 state 파일 삭제 |
+| A-19 | Loop 2 — full Input Format enforcement | Examiner dispatch template | 정식 5-section template 준수 |
+| A-20 | Loop 2 — full text enforcement | `<critical>` compliance | 원문 전체 전송, 요약 금지 |
+| A-21 | Loop 2 — Interview Hints conversion | Hints → question transformation | BAD/GOOD 변환 원칙 준수 |
+| A-22 | Loop 2 — Source Quality Formula | Source validation | Fact + Context + Verifiability 3요소 검증 |
+| A-23 | Loop 2 — Stage 5 Domain Suggest | Domain-informed proposals | 도메인 기반 소재 제안 |
+| A-24 | Loop 2 — E/R category separation | Feedback classification | E1-E6 vs R1-R5 처리 경로 분리 |
+| A-25 | Loop 1 — 확인 게이트 (examiner 제출 전) | Human-in-the-Loop Gate | 문제 정의 토론 후 examiner 제출 전 유저 확인 |
+| A-26 | Loop 2 — 확인 게이트 (examiner 제출 전) | Human-in-the-Loop Gate | 전체 엔트리 보여준 후 examiner 제출 전 유저 확인 |
+| A-27 | 확인 게이트 — 유저가 "아직" 응답 | Inner Collaboration Loop | "아직" → examiner 미호출, 내부 협업 루프로 복귀 |
+| A-28 | 확인 게이트 — 다회 반복 후 최종 승인 | Inner Collaboration Loop | 2-3회 "아직" 반복 개선 후 최종 확인 → examiner 제출 |
 
 ---
 
@@ -110,13 +120,15 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 
 **Expected behavior:**
 1. 전체 문제 정의(문제 + 기술 과제)를 유저에게 보여줌
-2. `Agent(subagent_type="tech-claim-examiner", ...)` 호출
-3. Causal Chain Depth ≥ 0.7 확인
-4. `$OMT_DIR/review-resume/drafts/{kebab-case}.md`에 저장
-5. state JSON `loop1.status = "passed"`, `loop1.score` 기록
+2. AskUserQuestion으로 유저 확인 ("이 방향으로 examiner에게 제출해도 될까?")
+3. 유저 승인 후 `Agent(subagent_type="tech-claim-examiner", ...)` 호출
+4. Causal Chain Depth ≥ 0.7 확인
+5. `$OMT_DIR/review-resume/drafts/{kebab-case}.md`에 저장
+6. state JSON `loop1.status = "passed"`, `loop1.score` 기록
 
 **Verification:**
 - [ ] 전문 보여주기 (조각 아님)
+- [ ] examiner 호출 전에 AskUserQuestion으로 유저 확인 존재
 - [ ] examiner 프롬프트에 Candidate Profile, Bullet Under Review, Technical Context 포함
 - [ ] draft 파일에 tags frontmatter + loop1_score 포함
 
@@ -130,12 +142,14 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 1. examiner 피드백을 유저에게 보여줌
 2. 대안을 제시 ("이런 방향으로 바꾸면 어떨까")
 3. 유저와 재토론
-4. 수정된 문제 정의를 다시 examiner에게 제출
-5. state는 `pending` 유지 (fail로 바꾸지 않음)
+4. 수정된 문제 정의를 유저에게 보여주고 AskUserQuestion으로 제출 확인 ("이 방향으로 다시 제출해도 될까?")
+5. 유저 승인 후 수정된 문제 정의를 다시 examiner에게 제출
+6. state는 `pending` 유지 (fail로 바꾸지 않음)
 
 **Verification:**
 - [ ] 피드백만 보여주고 끝내지 않음 (대안 제시 필수)
 - [ ] 유저에게 직접 채점하지 않음 (examiner 위임)
+- [ ] 재제출 시 examiner 호출 전에 AskUserQuestion으로 유저 확인 존재
 - [ ] 재제출 루프가 올바르게 동작
 
 ---
@@ -161,18 +175,24 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 
 ---
 
-## A-8: Loop 2 — Examiner CASCADING
+## A-8: Loop 2 — Examiner APPROVE (Full Verdict)
 
-**Context:** 유저와 완성한 전체 엔트리를 examiner에게 제출. E3b 0.82 반환.
+**Context:** 유저와 완성한 전체 엔트리를 examiner에게 제출. Examiner returns: E1-E6 all PASS, E3b 0.82 (CASCADING), R1-R5 all PASS, Final Verdict APPROVE.
 
 **Expected behavior:**
-1. Constraint Cascade Score (E3b) ≥ 0.8 확인 → PASS
+1. Verify ALL pass criteria met:
+   - E1-E6: all PASS
+   - E3b Constraint Cascade Score ≥ 0.8 (CASCADING)
+   - R1-R5: all PASS
+   - Final Verdict: APPROVE
 2. `$OMT_DIR/review-resume/drafts/{file}.md` 삭제
 3. `$OMT_DIR/review-resume/problem-solving/{file}.md`에 완성 엔트리 저장
-4. state JSON `loop2.status = "passed"`, `loop2.score = 0.82` 기록
+4. state JSON `loop2.status = "passed"` with examiner scores
 
 **Verification:**
-- [ ] 0.8 경계값에서 PASS (≥ 0.8)
+- [ ] E3b ≥ 0.8 alone is NOT sufficient — all 4 criteria must be met
+- [ ] If E3b ≥ 0.8 but any E-axis FAIL → still REQUEST_CHANGES
+- [ ] If E1-E6 all PASS but any R-item FAIL → still REQUEST_CHANGES
 - [ ] drafts/에서 제거 + problem-solving/에 저장
 - [ ] note-system.md 형식 준수 (tags frontmatter + body)
 
@@ -319,22 +339,26 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 
 ---
 
-## A-14: Loop 2 — Examiner Fail + Retry
+## A-14: Loop 2 — Examiner REQUEST_CHANGES + 5-Stage Source Extraction
 
-**Context:** C3 정산 시스템 시나리오의 전체 엔트리를 examiner에게 제출. E3b 0.62 반환.
+**Context:** C3 정산 시스템 시나리오의 전체 엔트리를 examiner에게 제출. Result: E3a FAIL (no tradeoff), E3b 0.62 (LISTED), R3 FAIL (layer separation), Final Verdict REQUEST_CHANGES.
 
 **Expected behavior:**
-1. examiner 피드백을 유저에게 보여줌
-2. 낮은 점수의 원인 분석 + 대안 제시 ("해결 전략에서 기각한 대안과 이유가 빠져있어서 점수가 낮은 것 같아. 이런 방향으로 보강하면 어떨까")
-3. 유저와 재토론 (Solution interview protocol 준수 — 한 번에 하나씩)
-4. 수정된 전체 엔트리를 다시 examiner에게 제출
-5. state는 `pending` 유지 (fail로 바꾸지 않음)
+1. **Step 1 — Classify feedback**: E3a/E3b are E1-E6 failures (source depth) → Source Extraction. R3 is R1-R5 failure (readability) → structural fix.
+2. **R1-R5 fix**: Propose R3 layer separation fix directly (no interview needed)
+3. **Step 2 — Convert Interview Hints**: Transform examiner's E3a Interview Hints into specific question with diagnostic context + specific target + examples
+4. **Step 3 — Source Extraction**: Start Stage 1 (Direct) for E3a FAIL axis
+   - If user provides source → check Source Quality (Fact + Context + Verifiability)
+   - If insufficient → Stage 2 (Bypass) → Stage 3 (Adjacent) → Stage 4 (Daily Work) → Stage 5 (Domain Suggest)
+5. **Step 4 — Reconstruct**: Incorporate extracted sources + R3 fix → show full entry → re-dispatch
+6. state stays `pending`
 
 **Verification:**
-- [ ] 피드백만 보여주고 끝내지 않음 (대안 제시 필수)
-- [ ] 재토론 시에도 Solution interview protocol 준수 (1 question + directions per turn)
-- [ ] 유저에게 직접 채점하지 않음 (examiner 위임)
-- [ ] 재제출 루프가 올바르게 동작
+- [ ] E1-E6 failures and R1-R5 failures handled differently (Source Extraction vs structural fix)
+- [ ] Interview Hints converted to specific questions (not used verbatim)
+- [ ] Source Quality check applied (Fact + Context + Verifiability)
+- [ ] Stages progress sequentially (not jump to Stage 5 immediately)
+- [ ] One question per turn maintained throughout extraction
 - [ ] state를 "failed"로 바꾸지 않음 (pending 유지)
 
 ---
@@ -408,3 +432,213 @@ resume-forge의 핵심 워크플로우(Source Mining, Loop 1 Problem Definition,
 - [ ] 모든 loop2 passed 확인 후 state 파일 삭제
 - [ ] state 파일을 남겨두지 않음
 - [ ] drafts/와 problem-solving/ 파일은 유지 (삭제 안 함)
+
+---
+
+## A-19: Loop 2 — Full Input Format Enforcement
+
+**Context:** Loop 2에서 C4 시나리오의 전체 엔트리를 examiner에게 제출하는 시점.
+
+**Expected behavior:**
+1. Examiner invocation template has ALL 5 sections:
+   - `## Candidate Profile` (Experience, Position, Target Company/Role)
+   - `## Bullet Under Review` (Section: Problem-Solving > title, Original: full text)
+   - `## Technical Context` (Technologies, JD keywords, Loop 1 findings)
+   - `## Target Company Context` (known details or "big tech standards" default)
+   - `## Proposed Alternatives` ("None" on first dispatch, revised text on re-dispatch)
+2. Loop 1 findings (Causal Chain score) included in Technical Context
+
+**Verification:**
+- [ ] All 5 sections present in examiner dispatch
+- [ ] Target Company Context not omitted (explicit "big tech standards" if unknown)
+- [ ] Loop 1 Causal Chain score forwarded as context
+- [ ] Proposed Alternatives section present (even if "None" on first dispatch)
+
+---
+
+## A-20: Loop 2 — Full Text Enforcement (`<critical>`)
+
+**Context:** Loop 2에서 examiner에게 제출할 때, draft 파일의 원문이 5개 섹션(Problem Definition, Technical Challenges, Strategy, Result)을 포함하는 15줄 엔트리.
+
+**Bad behavior:** "Parallelized 7-attribute LLM inference via goroutine pool, reducing per-item processing from 80s to 30s" (요약본)
+**Good behavior:** Draft 파일의 전체 원문을 Bullet Under Review > Original 필드에 그대로 복사
+
+**Verification:**
+- [ ] Examiner에게 전달된 Original 필드가 draft 파일의 전문과 일치
+- [ ] 요약, 압축, 의역하지 않음
+- [ ] `<critical>` 블록의 "NEVER summarize" 원칙 준수
+
+---
+
+## A-21: Loop 2 — Interview Hints → Question Conversion
+
+**Context:** Examiner가 E3a FAIL을 반환하면서 Interview Hint: "What tradeoff was made in choosing this approach?"
+
+**Bad behavior:** "Were there any tradeoffs?" (Hint를 그대로 사용)
+**Good behavior:** "Kafka 대신 SQS를 선택할 때, ordering guarantee를 포기한 건지, 아니면 partition key로 순서를 보장한 건지가 궁금해. 어떤 제약 때문에 이 선택을 하게 됐어?"
+
+**Verification:**
+- [ ] Examiner의 Interview Hint를 그대로 사용하지 않음
+- [ ] 변환된 질문에 3요소 포함: (1) 진단 맥락, (2) 구체적 타겟, (3) 예시
+- [ ] 한 번에 하나의 질문만 (batch 금지)
+
+---
+
+## A-22: Loop 2 — Source Quality Formula
+
+**Context:** Stage 2에서 유저가 "아 Redis 캐시 썼어"라고 답변.
+
+**Expected behavior:**
+1. Fact check: "Redis를 썼다" → Fact 있음 ✓
+2. Context check: "왜 Redis를 선택했는지, 어떤 패턴으로 적용했는지" → Context 없음 ✗
+3. → 추가 질문: "Cache-Aside였어, Write-Through였어? TTL은 어떤 기준으로 설정했어?"
+4. Verifiability check: after/before 수치, 측정 방법 → 미확인 시 추가 질문
+
+**Verification:**
+- [ ] "Redis 썼어"만으로 source 확인 완료하지 않음
+- [ ] Fact만 있고 Context 없으면 추가 질문
+- [ ] 3요소 전부 충족될 때까지 추가 질문 계속
+- [ ] 3요소 충족 시 → 엔트리 재구성으로 진행
+
+---
+
+## A-23: Loop 2 — Stage 5 Domain Suggest
+
+**Context:** C5 시나리오. Stage 1-4 진행했으나 E4 (Scale-Appropriate Engineering) FAIL axis에 대한 소재가 부족. 유저는 Go + Kafka + PostgreSQL 스택의 위탁판매 플랫폼 2년차 백엔드.
+
+**Expected behavior:**
+1. Stages 1-4 exhausted → proceed to Stage 5
+2. AI synthesizes: 위탁판매 + Go + Kafka + 2년차 + E4(규모 적정) 맥락
+3. Domain-specific proposals: "위탁판매 플랫폼이면 상품 입고량이 급증하는 시즌에 Consumer lag이 쌓이는 문제가 흔한데, goroutine pool 크기를 동적으로 조정하거나 Auto Scaling을 적용한 경험 있나요?"
+4. If user confirms → use as source → Source Quality check → reconstruct
+5. If user denies all → build best entry with current sources → final dispatch
+
+**Verification:**
+- [ ] Stage 5에서 유저의 도메인/기술/경력을 종합한 제안
+- [ ] 제안이 추상적이지 않음 (구체적 기술 시나리오)
+- [ ] 유저 확인 시 Source Quality check 적용
+- [ ] 유저가 전부 부정해도 바로 포기하지 않음 (best entry → 마지막 dispatch)
+
+---
+
+## A-24: Loop 2 — E/R Category Separation
+
+**Context:** Examiner가 E3b LISTED (0.65) + R1 FAIL (unnecessary sentence) + R5 FAIL (volume exceeded)을 동시에 반환.
+
+**Expected behavior:**
+1. **Step 1 — Classify**: E3b는 E1-E6 failure (source depth) → Source Extraction. R1, R5는 R1-R5 failure (readability) → structural fix.
+2. R1 fix: identify and remove the unnecessary sentence directly
+3. R5 fix: compress entry to fit within line budget directly
+4. E3b fix: Start Source Extraction (Stage 1 → ...) to deepen the constraint cascade
+5. Both tracks addressed before re-dispatch
+
+**Verification:**
+- [ ] R1-R5 failures는 인터뷰 없이 직접 수정
+- [ ] E1-E6 failures는 Source Extraction 프로토콜로 처리
+- [ ] 두 카테고리 모두 처리된 후 re-dispatch (한쪽만 처리하고 제출하지 않음)
+- [ ] R fix가 E1-E6 품질을 훼손하지 않는지 확인
+
+---
+
+## A-25: Loop 1 — 확인 게이트 (examiner 제출 전)
+
+**Context:** Loop 1에서 C3 시나리오의 문제 정의를 유저와 충분히 토론했음. 전체 문제 정의를 보여줬고 유저도 만족하는 것처럼 보임. examiner 제출 시점.
+
+**Bad behavior:** 토론이 끝났다고 판단하는 즉시 `Agent(subagent_type="tech-claim-examiner", ...)` 호출 — 유저 확인 없이 바로 제출.
+
+**Good behavior:**
+1. 최종 문제 정의 전문을 보여줌
+2. AskUserQuestion: "이 방향으로 examiner에게 제출해도 될까? 더 다듬고 싶은 부분 있으면 말해줘"
+3. 유저가 "응, 제출해줘" (또는 유사한 긍정 응답)라고 확인하면 examiner 호출
+4. Causal Chain ≥ 0.7 → drafts/ 저장
+
+**Expected behavior:**
+1. 전체 문제 정의를 유저에게 보여줌
+2. AskUserQuestion으로 examiner 제출 전 유저 확인
+3. 유저 승인 후에만 `Agent(subagent_type="tech-claim-examiner", ...)` 호출
+4. examiner 결과에 따라 pass/fail 처리
+
+**Verification:**
+- [ ] examiner 호출 전에 반드시 AskUserQuestion 존재
+- [ ] 유저 확인 전에 examiner가 호출되지 않음
+- [ ] 확인 질문이 열린 형태 ("더 다듬고 싶은 부분 있으면 말해줘" 포함)
+- [ ] 유저 승인 후 examiner 호출 → 결과 처리 정상 진행
+
+---
+
+## A-26: Loop 2 — 확인 게이트 (examiner 제출 전)
+
+**Context:** Loop 2에서 C4 시나리오의 전체 엔트리(문제 정의 + 기술 과제 + 해결 전략 + 결과)를 완성하고 유저에게 보여줬음. examiner 제출 시점.
+
+**Bad behavior:** 전체 엔트리를 보여준 직후 바로 `Agent(subagent_type="tech-claim-examiner", ...)` 호출 — 유저 확인 없이 제출.
+
+**Good behavior:**
+1. 전체 엔트리를 유저에게 보여줌
+2. AskUserQuestion: "이 내용으로 examiner에게 제출해도 될까? 더 다듬고 싶은 부분 있으면 말해줘"
+3. 유저가 "좋아, 제출해줘" (또는 유사한 긍정 응답)라고 확인하면 examiner 호출
+4. 5-section Input Format으로 제출 → 결과 처리
+
+**Expected behavior:**
+1. 전체 엔트리(problem + challenges + solution + results)를 보여줌
+2. AskUserQuestion으로 examiner 제출 전 유저 확인
+3. 유저 승인 후에만 `Agent(subagent_type="tech-claim-examiner", ...)` 호출
+4. examiner APPROVE → problem-solving/ 저장 / REQUEST_CHANGES → 피드백 처리
+
+**Verification:**
+- [ ] show 직후 examiner를 바로 호출하지 않음
+- [ ] examiner 호출 전에 반드시 AskUserQuestion 존재
+- [ ] 확인 질문이 열린 형태 (선택지 강제 아님)
+- [ ] 유저 승인 후에만 examiner 호출
+
+---
+
+## A-27: 확인 게이트 — 유저가 "아직" 응답
+
+**Context:** A-26과 동일 상태. 전체 엔트리를 보여주고 "이 내용으로 제출해도 될까?"라고 확인 게이트를 거쳤음. 유저가 "아직 더 다듬고 싶어 — 해결 전략 부분이 좀 약한 것 같아"라고 응답.
+
+**Note:** "아직"은 "다음"과 다르다. "다음"은 이 시나리오를 건너뛰고 다음 시나리오로 이동하는 skip이다. "아직"은 같은 시나리오 안에서 계속 개선하겠다는 신호 — 내부 협업 루프(인터뷰 → 수정 → 재검토)로 돌아간다.
+
+**Bad behavior:** 유저가 "아직"이라고 했음에도 불구하고 `Agent(subagent_type="tech-claim-examiner", ...)` 호출 — 확인 게이트를 무시하고 제출.
+
+**Good behavior:**
+1. "아직"을 examiner 제출 불가 신호로 인식 (시나리오 skip이 아님)
+2. 어느 부분을 개선하고 싶은지 확인 ("해결 전략이 약한 것 같다고 했는데, 어떤 부분이 부족한 것 같아?")
+3. 유저와 협업하여 해당 부분 개선 (인터뷰 → 수정)
+4. 개선된 전체 엔트리를 다시 보여줌
+5. 확인 게이트 재실행: "이 버전으로 제출해도 될까?"
+
+**Expected behavior:**
+1. "아직" 응답 → examiner 호출 없이 내부 협업 루프로 복귀
+2. AskUserQuestion으로 개선 방향 파악
+3. 해당 부분 인터뷰 → 엔트리 수정
+4. 수정된 전체 엔트리 보여주기
+5. 확인 게이트 재실행
+
+**Verification:**
+- [ ] "아직" 응답 시 examiner를 호출하지 않음
+- [ ] "다음"(시나리오 skip)과 "아직"(내부 루프 복귀)을 혼동하지 않음
+- [ ] 개선 방향을 파악하는 AskUserQuestion 존재
+- [ ] 수정 후 전체 엔트리를 다시 보여줌
+- [ ] 확인 게이트가 재실행됨 (유저가 승인할 때까지 examiner 미호출)
+
+---
+
+## A-28: 확인 게이트 — 다회 반복 후 최종 승인
+
+**Context:** Loop 2에서 C5 시나리오. 확인 게이트를 처음 거쳤더니 유저가 "아직 — 트레이드오프 설명이 더 필요해"라고 응답. 개선 후 두 번째 확인 게이트에서도 "아직 — 결과 수치를 좀 더 구체적으로"라고 응답. 세 번째 확인 게이트에서 "좋아, 제출해줘"라고 응답.
+
+**Expected behavior:**
+1. **1차 확인 게이트**: 전체 엔트리 보여줌 → "제출해도 될까?" → 유저: "아직 — 트레이드오프 설명이 더 필요해"
+2. **1차 내부 루프**: 트레이드오프 인터뷰 → 엔트리 수정 → 수정본 보여줌
+3. **2차 확인 게이트**: "이 버전으로 제출해도 될까?" → 유저: "아직 — 결과 수치를 좀 더 구체적으로"
+4. **2차 내부 루프**: 결과 수치 인터뷰 → 엔트리 수정 → 수정본 보여줌
+5. **3차 확인 게이트**: "이 버전으로 제출해도 될까?" → 유저: "좋아, 제출해줘"
+6. 유저 승인 후 `Agent(subagent_type="tech-claim-examiner", ...)` 호출
+
+**Verification:**
+- [ ] 확인 게이트가 매 반복마다 재실행됨 (1회성이 아님)
+- [ ] 각 "아직" 응답마다 examiner 호출 없이 내부 루프로 복귀
+- [ ] 각 내부 루프는 AskUserQuestion으로 개선 방향 확인 후 진행
+- [ ] 개선된 전체 엔트리를 매번 다시 보여줌
+- [ ] 유저가 최종 승인했을 때만 examiner 호출
+- [ ] examiner 호출은 전체 흐름에서 정확히 1회 (다회 반복에도 중간 호출 없음)
