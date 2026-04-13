@@ -86,28 +86,122 @@ Single-dimension impact does NOT fail E2 — E2 evaluates causal validity, not b
 
 This check is informational — it does not change the E2 PASS/FAIL verdict. It provides context for E6 (Target-Scale Transferability), where multi-dimensional impact demonstrates transferable judgment.
 
+**Constraint Resolution Verification (E2 supplement):**
+
+When the problem area states explicit constraints, verify that the solution area addresses each one:
+
+**Verification procedure:**
+1. List all constraints explicitly stated in the problem area (scale limits, SLA requirements, failure modes, architectural restrictions)
+2. For each constraint, identify the corresponding solution in the solution area
+3. If a constraint has no corresponding solution AND is not explicitly accepted as a tradeoff → E2 FAIL
+
+**Tradeoff acceptance:** If a constraint is deliberately unresolved and stated as an accepted cost/limitation in the solution area, this counts as "addressed" — PASS.
+
+**Scope:** Per-entry only. Do not cross-reference constraints between different resume entries.
+
+**Example (FAIL):**
+```
+Problem: "5,000 items/day, 80s per item = 111 hours total processing within 24-hour processing window"
+Strategy: "goroutine pool parallelization, reducing per-item time from 80s to 30s"
+```
+Per-item latency is addressed (80s→30s), but total throughput (5,000×30s = 41.67 hours > 24 hours) is not. The solution addresses one constraint but leaves another unresolved without explanation. → E2 FAIL: unstated how daily volume fits within processing capacity.
+
+**Example (PASS):**
+```
+Problem: "5,000 items/day, 80s per item = 111 hours total processing"
+Strategy: "goroutine pool parallelization, per-item 80s→30s. 3 Consumer instances handle daily throughput within 12-hour business window"
+```
+Both per-item latency and total throughput are addressed. → E2 PASS.
+
+This check is informational when constraints are implicit — only fail when constraints are **explicitly stated** in the problem area and left unaddressed.
+
+**Arithmetic Consistency Check (E2 supplement):**
+
+When an entry contains quantitative claims (throughput, latency, SLA, cost reduction), verify internal arithmetic consistency.
+
+**Scope:** Applies to throughput, latency, cost, and performance claims. Does NOT apply to classification rates, success percentages, or other non-arithmetic approximations (e.g., "~80% auto-classified" is not subject to arithmetic verification).
+
+**Verification procedure:**
+1. Extract all quantitative claims from the entry (throughput, latency, cost reduction, etc.)
+2. Verify arithmetic consistency against the stated architecture — do the claimed numbers follow from the described approach?
+3. If arithmetic produces a logical impossibility → E2 FAIL; if arithmetic only works with unstated assumptions → E2 P1
+
+**Severity:**
+- **E2 FAIL:** Arithmetic produces a logical impossibility with the stated architecture. Example: a single sequential processor claimed to handle workload exceeding 24 hours, with no mention of horizontal scaling or concurrency.
+- **E2 P1 (finding, not FAIL):** Arithmetic requires unstated assumptions to work. Example: throughput claim only closes with 3+ Consumer instances, but the entry doesn't specify instance count. Recommend the candidate make the assumption explicit.
+
+**Approximate values:** Numbers explicitly marked as estimates (~, 약, approximately) are exempt from strict arithmetic verification. Only fail when the approximation changes the architectural conclusion.
+
+**Example:**
+"7 attributes at 5-30s each processed in parallel via goroutine pool → wall-clock time ≈ max(individual times) ≈ 30s per item."
+→ Arithmetic is consistent: parallel execution bounded by the slowest attribute (~30s), not the sum (~80s).
+
+"Per-item processing 80s → 10s via goroutine parallelization of 7 attributes"
+→ Arithmetic inconsistency: the slowest attribute alone takes ~30s. Even with perfect parallelism, 10s is impossible. → E2 FAIL.
+
 ### E3. Problem Fidelity (Tradeoff Authenticity + Problem Surface)
 
 **Absolute standard — no career-level calibration.** A tradeoff that doesn't hold logically, or a bullet that compresses a complex reality into a flat description, fails at any experience level.
 
 Does this bullet faithfully represent the engineering reality? Two sub-evaluations:
 
-#### E3a. Tradeoff Authenticity
+#### E3a. Tradeoff Authenticity (Proportional Depth)
 
-Is the tradeoff for the technology choice mentioned in this bullet specific to this problem context?
+**Absolute standard — no career-level calibration.** A tradeoff that doesn't hold logically fails at any experience level.
+
+Any technology choice can qualify as a technical decision depending on context. Standard practices are not automatically exempt — the depth of justification required scales with narrative weight.
+
+**Proportional Depth Model:**
+
+E3a evaluates tradeoff authenticity at three tiers, based on the decision's role in the narrative:
+
+| Tier | Definition | Required Depth | FAIL Condition |
+|------|-----------|----------------|----------------|
+| **Core decision** | A choice the entry's quantified outcome directly depends on. Removing this decision breaks the narrative. | Full tradeoff analysis: (1) alternative named, (2) context-specific rejection reason, (3) accepted cost/downside | Core decision missing any of the 3 required elements → **FAIL** |
+| **Supporting decision** | A choice the narrative holds without, but engineering quality degrades. | Brief justification: why-this-over-that in one clause or sentence | Supporting decision with zero justification → **P1** (finding attached to PASS, same pattern as E3b LISTED) |
+| **Incidental mention** | Technology/tool mentioned as environment context, not as a deliberate choice. | None required. But if no justification is needed, evaluate under R1 whether the mention belongs in the entry at all. | — |
+
+**Classification test:** "A decision is core if the entry's quantified outcome depends on it. A decision is supporting if the narrative holds without it but engineering quality degrades. A mention is incidental if removing it changes nothing about the narrative."
+
+**Degenerate path prevention:** If ALL decisions in a bullet are classified as incidental (no core, no supporting), E3a FAILs automatically — this indicates the bullet contains no meaningful technical decisions.
 
 **Evaluation method:**
-1. Identify the technology choice/decision in the bullet
-2. Check whether "why this was chosen and what was given up" is stated explicitly
-3. Verify whether what was given up is real in this context (not textbook)
+1. Read the strategy section and identify all technical choices mentioned
+2. Classify each as core / supporting / incidental using the classification test
+3. For each core decision: verify (1) alternative named, (2) rejection reason is context-specific (not textbook), (3) accepted cost stated
+4. For each supporting decision: verify at minimum a brief why-this-over-that
+5. Incidental mentions: no tradeoff check, but flag under R1 if the mention adds no narrative value
 
-**Example:**
-- "Adopted MSA for scalability" → FAIL: "scalability" is a textbook benefit of MSA. No mention of what specifically needed to scale in this system, or what problem existed in the monolith
-- "Adopted MSA for deployment independence. Accepted increased network overhead between services and distributed transaction complexity. Converted order-payment service to eventual consistency model, allowing up to 2s delay in payment confirmation" → PASS: concrete tradeoffs (network, distributed transactions, 2s eventual consistency delay) are real in this problem context
+**E3a and R1/R5 alignment:** The proportional depth model aligns naturally with R5's Signal Curation. Core decisions need full tradeoff depth (Impact + Judgment + Depth). Supporting decisions need brief justification (~1 clause). Incidental mentions need 0 lines — if no justification is warranted, evaluate under R1 whether the mention belongs at all. This prevents the E3a×R5 conflict: demanding full tradeoff analysis on every choice leads to exhaustive listing (R5 Layer 3 bloat symptom), while proportional depth ensures each included decision earns its space through the Point Selection test (R5 Layer 2).
+
+**Example (Core decision — PASS):**
+- "Chose gRPC over REST for internal service mesh — REST's per-request JSON serialization added 15ms p99 overhead at 10K RPS internal calls. Accepted operational complexity of proto schema management and reduced browser debugging capability."
+→ PASS: Alternative named (REST), context-specific rejection (15ms overhead at 10K RPS — tied to this system's internal call volume), accepted cost (proto management + debugging).
+
+**Example (Core decision — FAIL):**
+- "Used DynamoDB for order storage to handle high write throughput."
+→ FAIL: No alternative named, no rejection reasoning, no accepted cost. "High write throughput" is the expected benefit, not a tradeoff. A CTO asks: "Why DynamoDB over PostgreSQL with partitioning? Over Cassandra? What consistency guarantees did you give up?" — the bullet provides no answer.
+
+**Example (Core decision — FAIL, generic rejection):**
+- "Chose PostgreSQL over MySQL because PostgreSQL has more advanced features and better community support."
+→ FAIL: Alternative named (MySQL), but rejection reason is generic — "more advanced features" applies to any PostgreSQL vs MySQL comparison regardless of context. No accepted cost mentioned. Compare with PASS version: "PostgreSQL over MySQL for JSONB native indexing on product attributes (500+ dynamic fields) — accepted higher memory footprint per connection and slower connection establishment under burst traffic."
+
+**Example (Supporting decision — PASS):**
+- "Circuit breaker with Resilience4j (Hystrix rejected — Netflix deprecated, no active maintenance for critical path dependency)"
+→ PASS: Brief why-this-over-that in one clause. The rejection reason (deprecation + no maintenance) is context-specific for a critical path dependency.
+
+**Example (Supporting decision — FAIL → P1):**
+- "Added DynamoDB Streams and CloudWatch alarms to improve system reliability."
+→ P1: Technologies listed without any justification. Why DynamoDB Streams over Change Data Capture alternatives? Why CloudWatch over Grafana/PagerDuty? No brief reasoning provided. This is a P1 finding (revision recommended), not outright FAIL — the narrative may hold without these decisions, but their unjustified presence weakens interview defensibility.
 
 **Technical verification questions:**
-- "What was the actual impact of what you gave up in this tradeoff?"
-- "If you did this again, would you make the same choice?"
+- "For each core decision: can you name the alternative, explain why it was rejected in THIS context, and state what was given up?"
+- "For supporting decisions: is there at least a one-line 'why this over that'?"
+- "Are any incidental mentions taking space without adding narrative value?" (→ defer to R1)
+
+**Interview simulation:**
+"You mentioned using [technology X]. What alternatives did you consider, and why did you choose this one for THIS specific situation?"
+→ Does the bullet imply an answer to this question? If yes for core decisions and partially for supporting decisions → PASS.
 
 #### E3b. Problem Surface
 

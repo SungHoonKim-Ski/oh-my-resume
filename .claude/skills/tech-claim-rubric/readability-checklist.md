@@ -10,7 +10,7 @@ The hiring pipeline has a brutal funnel: recruiters scan in 6-30 seconds, hiring
 - Tradeoff presence/authenticity → E3a (do NOT re-evaluate in Phase C)
 - Causal cascade depth → E3b (do NOT re-evaluate in Phase C)
 - Signal clarity → E5 (do NOT re-evaluate in Phase C)
-- Phase C evaluates **physical form, structure, and density** only
+- Phase C evaluates **physical form, structure, density, and reasoning visibility**
 
 ---
 
@@ -18,7 +18,7 @@ The hiring pipeline has a brutal funnel: recruiters scan in 6-30 seconds, hiring
 
 **Unit of evaluation:** Each individual sentence
 
-**Core question:** "Does this sentence earn its space?" R1 is the compactness gate — it asks whether deleting a sentence would leave a gap in the problem→solution→result arc. If the narrative reads equally well without it, the sentence is expendable regardless of how interesting or technically valid its content is.
+**Core question:** "Does this sentence earn its space by contributing to the reader's understanding of what was done, why it was done (reasoning, alternatives, tradeoffs), or what changed?" R1 is the compactness gate — it asks whether deleting a sentence would leave a gap in the problem→reasoning→solution→result arc. If the narrative reads equally well without it, the sentence is expendable regardless of how interesting or technically valid its content is.
 
 ### Why This Matters
 
@@ -34,16 +34,18 @@ For each sentence in the entry, apply this test:
 
 1. Cover the sentence
 2. Read the preceding and following sentences together
-3. Ask: "Does the problem → solution → result arc still hold? Is there a logical gap?"
+3. Ask: "Does the problem → reasoning → solution → result arc still hold? Is there a logical gap?"
 4. If the arc holds without the sentence → the sentence is unnecessary → R1 FAIL
 
 **Common removable patterns:**
-- Implementation details that don't affect the narrative (scheduler polling interval, batch size, specific timeout values)
+- Implementation parameters that don't affect the narrative (scheduler polling interval, batch size, specific timeout values). Note: design rationale is NOT removable — rejected alternatives with context-specific reasons, accepted costs/limitations, and verification methods earn their space by making the reasoning visible.
 - Problem context that is already resolved by the solution or proven by the result metrics
 - Defensive explanations for obvious choices
 - Information repeated across sections (constraint stated in problem definition AND re-explained in strategy)
 
-**Important:** R1 does NOT judge whether content is technically interesting — only whether it is narratively necessary. A fascinating implementation detail that doesn't serve the problem→solution→result arc is still removable.
+**Important:** R1 does NOT judge whether content is technically interesting — only whether it is narratively necessary. A fascinating implementation parameter that doesn't serve the problem→reasoning→solution→result arc is still removable.
+
+**R1/E3a boundary:** R1 checks whether reasoning is visible to the reader (presence/form). Whether the reasoning is technically valid or the tradeoff is sound is E3a's scope (substance/quality). R1 does not evaluate tradeoff quality — only whether the reasoning is present and visible.
 
 > For a complete entry passing all R1-R5, see [Cross-Validated Complete Examples](#cross-validated-complete-examples) at the end of this document.
 
@@ -86,6 +88,34 @@ The "30 seconds" constraint appears in both sections. In the strategy, the reade
 - Display SLA achievement **55% → 95%**
 ```
 Remove the problem definition → "why was parallelization needed?" is unanswered. Remove the strategy → "how was the SLA recovered?" is unanswered. Remove the result → "did it work?" is unanswered. Every sentence is load-bearing.
+
+**PASS — Design rationale retained:**
+```
+**Strategy**
+- 멱등성(image_id + attribute)으로 중복 방지
+```
+This shows an engineering decision (idempotency strategy with a specific key structure). Removing it would leave the reader unable to understand how the system prevents duplication — the "why this approach" disappears entirely. Design rationale that makes a decision visible is not removable under R1.
+
+**PASS — Design rationale earns its space (reasoning visibility):**
+```
+**Strategy**
+- Orchestrator-based compensating workflow for multi-step operations
+  - Choreography evaluated: blame-type-dependent downstream branching
+    creates consistency risk across independent services — rejected
+  - Accepted: orchestrator as single coordination point, mitigated by
+    active-passive failover
+```
+Under the old "arc test," covering the Choreography rejection and the accepted tradeoff leaves the narrative intact — "orchestrator-based compensating workflow → Result" still holds. But under R1's expanded narrative, removing these sub-bullets leaves the reader unable to understand WHY orchestration was chosen and WHAT was given up.
+
+**Key distinction:** "narrative arc intact" ≠ "reasoning visible." The arc may survive without a sentence, but if removing it makes the reader unable to understand WHY a decision was made, the sentence is load-bearing under R1. R1 requires the rejection to include a *reason* — merely mentioning an alternative ("Choreography rejected") without a context-specific rationale does not pass.
+
+**FAIL — Trivial rationale does not earn space:**
+```
+**Strategy**
+- MongoDB for document storage
+  - MySQL evaluated — rejected. MongoDB selected.
+```
+While structured as a tradeoff, the content provides no reasoning — no context-specific rejection reason, no constraint that led to the choice. The entry reads identically as "MongoDB for document storage" without the sub-bullet. This is a decision *mention*, not design *rationale*. R1 protects reasoning, not name-drops.
 
 ---
 
@@ -134,33 +164,81 @@ Strategy describes the action. Result quantifies the impact with bold formatting
 
 ---
 
-## R3. Layer Separation
+## R3. Narrative Flow
 
-**Unit of evaluation:** Section boundaries
+**Unit of evaluation:** Entry structure
 
-**Core question:** "Does each section (Problem Definition / Strategy / Result) serve exactly one role, with no cross-contamination?"
+**Core question:** "Can the reader trace the flow of problem → reasoning → solution → result without backtracking?"
 
 ### Why This Matters
 
-In a 10-20 line resume entry, every section transition must be instant. When a Strategy section starts with problem context, the reader must context-switch — "is this still the problem or the solution?" — creating cumulative cognitive load.
+In a resume entry, every section transition must be instant. When content is placed in the wrong area — problem context in the solution area, business symptoms without decision linkage, actions described in the result — the reader must context-switch, creating cumulative cognitive load. R3 checks that the entry's overall flow is coherent and navigable.
 
-### What to Check
+### Required Elements
 
-**Section role definitions:**
-- **Problem Definition**: What was broken? (symptom + root cause + key constraint)
-- **Strategy**: What was done? (chosen approach + brief rejection signal where needed)
-- **Result**: What changed? (quantitative before→after metrics)
+The entry must contain content fulfilling these three roles (section names and count are flexible):
+- **Problem area**: What was broken? (symptom, root cause, key constraints)
+- **Solution area**: What was done and why? (chosen approach + reasoning behind the choice)
+- **Result area**: What changed? (quantitative before→after metrics)
 
-**Specific violations to detect:**
+### Additional Sections
 
-1. **"기술 과제" (Technical Challenge) as a separate section** — In resume format, this must be merged into Problem Definition. A separate section fragments the narrative and delays the reader from reaching the Strategy.
+Sections beyond the three required roles (e.g., Technical Challenge, Team Context, Background) are permitted when:
+1. The section serves a role distinct from the three required areas
+2. The section does not duplicate content already present in a required area
 
-2. **Problem context in Strategy** — Strategy bullets that start with problem explanations:
-   - FAIL: "Since external APIs cannot participate in DB transactions, we implemented..."
-   - PASS: "Orchestrator-based compensating workflow for multi-step operations across external API boundaries"
-   - The constraint ("external APIs outside DB transaction boundary") belongs in Problem Definition.
+**PASS — Additional section with distinct role:**
+A "Technical Challenge" section establishing engineering complexity (attribute processing time variance, structural impossibility of meeting SLA) when Problem Definition covers business impact (SLA achievement drop, premium brand delay). Different roles, no content duplication.
 
-3. **Strategy content in Result** — Result bullets that describe additional actions rather than metrics.
+**FAIL — Additional section duplicating required area:**
+A "Technical Challenge" section that restates the same constraints already in Problem Definition (e.g., both sections mention "PG API partial failure causes inconsistency"). This is cross-layer content duplication.
+
+**PASS — 4-section structure with distinct roles:**
+```
+**Problem Definition**
+- Return processing 3 days, 8+ weekly disputes from manual blame attribution
+
+**Technical Challenge**
+- Inspection is manual (free-text input) — structured data extraction
+  required for automated classification
+- PG/carrier APIs outside DB transaction boundary — partial completion
+  states require compensation
+
+**Strategy**
+- Structured inspection checklist + rule-based blame auto-classification
+  (~80% auto; LLM photo analysis rejected — insufficient accuracy for
+  monetary decisions)
+- Orchestrator-based compensating workflow per blame type, reverse
+  compensation on failure
+
+**Result**
+- Processing **3 days → same day**, disputes **8/week → 1/week**
+```
+Problem Definition establishes business impact (processing time, disputes). Technical Challenge establishes engineering constraints (manual input, transaction boundaries). Each section has a distinct role — no content overlap.
+
+**FAIL — Additional section that duplicates a required area:**
+A "Technical Challenge" section restating "수동 귀책 판정으로 처리 지연과 분쟁이 발생" when Problem Definition already says "return processing 3 days, 8+ weekly disputes." This is the same information (processing delay + disputes) rephrased in technical language — cross-layer content duplication regardless of the section name.
+
+### Design Rationale in Solution Area
+
+Technical constraints used as decision motivation in the solution area are **design rationale**, not problem context bleeding. The distinction:
+
+- **Design rationale (PASS):** Technical constraint directly linked to a specific decision
+- **Business symptom without decision linkage (FAIL):** Business metrics (revenue, SLA numbers, customer impact) appearing in the solution area without motivating a specific decision
+
+**PASS examples:**
+- "외부 API가 DB 트랜잭션에 참여할 수 없으므로 오케스트레이터 기반 보상 워크플로우 선택" — technical constraint (transaction boundary) directly motivates the decision (orchestrator)
+- "쿼리 최적화는 인덱스 이미 적용 완료로 한계 → Redis Cache-Aside 도입" — exhausted alternative directly motivates the next decision
+
+**FAIL examples:**
+- "매출 기여 40%인 프리미엄 브랜드의 전시가 지연되어 고객 불만이 증가했다" in solution area — business symptom with no decision linkage (belongs in problem area)
+- "일일 접수량이 5,000건으로 증가하여 SLA 달성률이 55%로 하락했다" in solution area — business metric describing the problem, not motivating a specific solution decision
+
+### Violations (3 types)
+
+1. **Cross-layer content duplication** — The same constraint, fact, or metric appears in multiple sections. If the problem area states a constraint, the solution area should not re-explain it.
+2. **Business symptom in solution area without decision linkage** — Business metrics or customer impact in the solution area that don't directly motivate a specific technical decision.
+3. **Action description in result area** — Result sections should contain quantitative before→after metrics, not descriptions of additional actions taken.
 
 **FAIL — Action in Result:**
 ```
@@ -169,6 +247,14 @@ In a 10-20 line resume entry, every section transition must be instant. When a S
 ```
 The Result contains an action description ("SQS로 비동기 분리"), not a metric. This belongs in Strategy.
 
+**FAIL — Business symptom without decision linkage in solution area:**
+```
+**Strategy**
+- 일일 접수량이 5,000건으로 증가하여 SLA 달성률이 55%로 하락했다
+- Redis Cache-Aside 도입
+```
+The first bullet is a business metric describing the problem — it belongs in the problem area. It does not motivate a specific decision in the solution area.
+
 **PASS — Metric in Result:**
 ```
 **Result**
@@ -176,30 +262,6 @@ The Result contains an action description ("SQS로 비동기 분리"), not a met
 ```
 
 > For a complete entry passing all R1-R5, see [Cross-Validated Complete Examples](#cross-validated-complete-examples) at the end of this document.
-
-### Examples
-
-**FAIL — Problem context bleeds into Strategy:**
-```
-**Strategy**
-- Redis Cache-Aside to reduce DB hits
-  - Query optimization was already at its limit with indexes fully applied
-  - Local Cache was ruled out due to inconsistency across multiple servers
-    with frequent product state changes
-```
-"Query optimization at its limit" and "Local Cache ruled out" are problem context (what was tried/considered), not strategy (what was done). They explain WHY Cache-Aside was chosen, but in a format that mixes layers.
-
-**PASS — Clean separation:**
-```
-**Problem Definition**
-- Product listing API p95 500ms+, DB CPU 90%. Index optimization already
-  applied; remaining bottleneck is per-request DB hit volume
-
-**Strategy**
-- Redis Cache-Aside with separate invalidation policies: list cache
-  (TTL 5min) and detail cache (event-driven eviction on state change)
-```
-The problem section establishes "indexes aren't enough" — the reader enters Strategy already knowing why caching was needed.
 
 ---
 
@@ -262,66 +324,185 @@ Same information, half the volume. Every technical choice is named with its reco
 
 ---
 
-## R5. Volume Compliance
+## R5. Signal Curation
 
 **Unit of evaluation:** Entire entry
 
-**Core question:** "Does this entry fit within the physical length appropriate for a formal resume?"
+**Core question:** "Does this entry list everything the engineer did, or select the most compelling parts to present?"
 
 ### Why This Matters
 
-4-5 entries at 20+ lines each produces 80-100+ lines — a wall of text that defeats scannability. The line budget matches entry length to problem complexity.
+The ability to distill complex project work into its most compelling elements is a core engineering competency — not just a writing skill. It sits at the intersection of three awareness types: self-awareness (which decisions best demonstrate MY judgment), reader-awareness (what will the hiring manager care about most), context-awareness (which claims need the most supporting evidence).
 
-### Evaluation Criteria
+Include everything and nothing stands out. Select the essentials and everything stands out.
 
-**Per-entry line budget (description block only, excluding title/subtitle/caption/skills):**
+### What to Check (3-Layer Test)
 
-| Complexity | Technical decisions | Line budget (max) |
-|---|---|---|
-| High | 3-4 decisions | ≤20 lines |
-| Medium | 2 decisions | ≤16 lines |
-| Low | 1 decision | ≤13 lines |
-| **Hard cap** | — | **20 lines** |
+**Layer 1 — Skim Test (5-second scan):**
 
-**Technical decision**: A choice where a named alternative was considered and rejected with a stated reason ("chose X over Y because Z"). Count each such choice as one decision. Implementation parameters of a chosen approach (TTL value, batch size, polling interval) are NOT separate decisions. A technique mentioned without an explicitly rejected alternative does not count as a decision.
+Reading only top-level bullets, can the reader identify: (1) what was broken, (2) the key technical decision, (3) what changed? If any of these three is not visible at the top level → R5 FAIL.
 
-**Line counting:** Count source markdown lines in the description block. One newline = one line. Section headings (**Problem Definition**, **Strategy**, **Result**) count. Blank lines between sections do NOT count — they are formatting, not content.
+Operational definition of "top-level bullet": the highest-indent `- ` items under each section heading. If visual hierarchy markers (bold text, inline headers) are used, those markers define the top level regardless of indent. If no hierarchy markers exist, every bullet is top-level — and the Skim Test evaluates whether the set of bullets collectively answers the three questions without requiring sequential reading of all sub-bullets.
 
-**Section budget guide:**
-- Problem Definition: 2-3 lines
-- Strategy: 6-12 lines (flexible based on complexity)
-- Result: 2-3 lines
+**Layer 2 — Point Selection:**
 
-### What to Check
+Does each included technical decision meet at least one criterion?
+- Impact: directly contributed to a quantified outcome
+- Judgment: shows engineering judgment (alternative rejected, tradeoff accepted)
+- Depth: reveals a non-obvious constraint discovery or approach mutation
 
-1. Count total description lines — exceeds hard cap 20?
-2. Count technical decisions in Strategy — does line count match complexity?
-3. Check Problem Definition length — exceeds 3 lines?
-4. Check if 4+ strategy bullets each span 3+ lines — likely over-detailed
+If a decision meets none → R5 FAIL.
+
+Corollary: "If you included it, show why. If you can't show why, cut it."
+
+**Layer 3 — Bloat Symptoms:**
+- Detail spill: parameters/config values listed without design rationale or systemic consequence
+- Exhaustive listing: every task performed is included with no selection
+- Scan dependency: within a single section, all bullets must be read sequentially to understand the section's point. Note: cross-section sequential flow (problem→strategy→result) is expected and normal — scan dependency applies within sections, not across them.
+
+Any symptom present → R5 FAIL.
+
+### Layer Evaluation Protocol
+
+Evaluate all three layers regardless of earlier results. Report all failing layers. The layer numbering indicates improvement priority (fix Layer 1 first), not evaluation order.
+
+### R1/R5 Boundary
+
+R1 evaluates whether individual sentences are narratively necessary (sentence-level cover test). R5 evaluates whether entire technical decisions earn inclusion through demonstrated Impact/Judgment/Depth (decision-level curation test). A decision can pass R1 (each sentence carries narrative weight) but fail R5 Layer 2 (the decision itself contributes nothing uniquely compelling to the entry). Conversely, a decision meeting R5 Layer 2 criteria can still fail R1 if individual sentences within it are redundant.
+
+### Length Signal
+
+Entries exceeding 25 lines are not automatically FAIL, but the evaluator should actively ask: "Are there decisions included that don't meet the Layer 2 criteria?" Longer entries have higher probability of containing unjustified inclusions — raise scrutiny proportionally.
+
+### When to Include All Decisions vs Curate
+
+**Independent strategies → Curate (select the essentials):**
+
+When strategies contribute independently to the result without one forcing another, select the core decision(s) and minimize or omit supporting decisions. If a decision is included, its justification (Impact/Judgment/Depth) must be visible. If justification isn't worth showing, the decision isn't worth including.
+
+**Constraint cascade → Include all (show the chain):**
+
+When strategy A's limitation forces strategy B, and B's limitation forces strategy C, include all of them. This is not "listing everything" — it is "showing the cascade." Length is justified because each decision is causally necessary to understand the next. The entry is long because the engineering reality is deep, not because the writer couldn't select.
 
 > For a complete entry passing all R1-R5, see [Cross-Validated Complete Examples](#cross-validated-complete-examples) at the end of this document.
 
 ### Examples
 
-**FAIL — 33 lines, hard cap exceeded:**
-An entry with 5-line problem definition + 4-line technical challenge section + 20-line strategy + 4-line result. Even though each section is individually reasonable, the total far exceeds the 20-line cap. The "technical challenge" section alone (which should be merged into problem definition per R3) adds 4 lines of structural overhead.
+**PASS — Independent strategies curated:**
 
-**PASS — 12 lines, medium complexity:**
+Goroutine pool is the core decision: consumer horizontal scaling rejected because partition increase is irreversible and per-item latency is unchanged; per-attribute topic separation rejected because 7×2×3 = 42 topics + orchestrator overhead; Kafka is an event transport, not a processing engine; in-consumer parallelization is structurally simpler. Accepted tradeoff: no independent per-attribute scaling. Topic separation is a supporting decision: Kafka lacks a priority queue; RabbitMQ rejected for dual-infra burden — brief inclusion is justified. Reconciliation scheduler is omitted entirely — a deliberate curation decision.
+
+- Layer 1 PASS: core decision (goroutine pool) and result (80s→30s per-item, SLA recovery) visible at top level on skim.
+- Layer 2 PASS: goroutine pool = Judgment (three alternatives rejected with context-specific reasons) + Depth (constraint: SLA metric is per-item completion, not aggregate throughput); topic separation = Judgment (two infrastructure alternatives rejected).
+- Layer 3 no symptoms: no config values without rationale, no exhaustive listing, no scan dependency within sections.
+
+**PASS — Constraint cascade, all decisions included:**
+
+Cache-aside introduced → stampede discovered under load → singleflight applied to collapse concurrent fetches → hot key identified as a separate dimension (single-key pressure unaffected by singleflight) → singleflight scope confirmed as intra-instance only → L1/L2 2-tier cache added to address cross-instance pressure. Each strategy has tradeoff depth. Entry is ~25 lines but every decision is causally necessary.
+
+- Layer 1 PASS: problem (cache stampede under load), cascade of strategies, and final result visible at top level.
+- Layer 2 PASS: all decisions meet Judgment + Depth — each is forced by the previous strategy's discovered limitation (constraint cascade).
+- Layer 3 no symptoms: no detail spill, no exhaustive listing, no scan dependency within sections. Note: the entry is long because the engineering reality is deep, not because the writer couldn't select.
+
+**FAIL — Skim test fails + exhaustive listing:**
+
+Four strategies listed at equal visual weight with no bold or hierarchy markers. Sub-bullets contain configuration values (pool sizes, timeouts, partition counts) without explaining why those values were chosen.
+
+- Layer 1 FAIL: no strategy stands out as the key decision in a 5-second scan — all four strategies have identical visual prominence.
+- Layer 2 FAIL: sub-bullets contain parameters (pool size, timeout values, partition counts) without Impact, Judgment, or Depth — none explain why those values were selected or what happens if they differ.
+- Layer 3 FAIL: detail spill (config values without rationale) + exhaustive listing (every implementation task included with no curation).
+
+---
+
+**PASS — Complete entry example:**
 ```
 **Problem Definition**
-- Product listing API p95 500ms+, DB CPU 90%. Per-request DB direct
-  query is the bottleneck
+- Daily intake 2,500→5,000 items; display SLA (2hr) achievement 90%→55%
+- Premium brands (40% revenue) delayed by FIFO, no priority mechanism
+
+**Technical Challenge**
+- 7-attribute LLM inference per item, display only after all complete.
+  Per-item 80s sequential, 5,000 items = SLA structurally impossible
+- Single-attribute failure triggers full re-inference → API cost amplification
 
 **Strategy**
-- Redis Cache-Aside with dual invalidation: list cache (5min TTL) and
-  detail cache (event-driven eviction on state change)
-- singleflight + TTL jitter for cache stampede defense (lower operational
-  overhead vs distributed lock)
+- **In-consumer goroutine pool for parallel attribute inference**
+  - Consumer horizontal scaling evaluated: increases throughput but
+    per-item 80s latency unchanged — SLA metric is per-item completion
+  - Per-attribute topic separation evaluated: 7×2×3 = 42 topics +
+    orchestrator overhead; Kafka as event transport, not processing engine
+  - Per-item 80s→30s (bounded by slowest attribute). Accepted: no
+    independent per-attribute scaling; revisit at team/model separation
+- **Premium/standard topic separation + differential consumer allocation**
+  - Kafka lacks priority queue; RabbitMQ rejected for dual-infra burden
+  - Premium consumers allocated 3× standard ratio; rebalanced after observing
+    premium lag spike during intake surge — ratio was the fix, not partition count
+- **Partial failure non-blocking retry**
+  - At small volume, full re-inference acceptable. Volume doubling
+    revealed 7× API cost amplification → save-success, retry-failure-only
+  - Success persisted immediately; failed attributes to retry topic
+- **Reconciliation scheduler** for message loss/crash recovery,
+  idempotency (image_id + attribute) for deduplication
+  - Periodic re-delivery considered but rejected — re-delivery re-runs all
+    attributes including already-succeeded ones, defeating partial-failure savings
 
 **Result**
-- Product API p95 **500ms → 150ms**, peak DB CPU **90% → 45%**
+- Display SLA **55%→95%**, premium display **2hr→40min**
+- Failed-attribute-only retry → API cost **80% reduction**
 ```
-2 technical decisions, 12 lines total. Problem definition is 2 lines. Strategy is 6 lines. Result is 2 lines. Clean within the medium complexity budget.
+R5 PASS — Layer 1: top-level bold strategies (goroutine pool, topic separation, partial failure retry, reconciliation) immediately visible on skim. Layer 2: each strategy demonstrates Judgment (rejected alternatives with context-specific reasons) and Depth (constraint cascade — each strategy forced by the previous one's limitation). Layer 3: no detail spill (all sub-bullets contain decision rationale, not config values), no exhaustive listing (each inclusion is causally necessary for the cascade), no scan dependency within sections.
+
+**FAIL — Complete entry example:**
+```
+**Problem Definition**
+- Display SLA (2hr) achievement 90%→55% after daily intake doubled to 5,000
+- Premium brands (40% revenue) delayed; no priority mechanism in FIFO consumer
+
+**Strategy**
+- **Goroutine pool for parallel attribute inference**, per-item 80s→30s
+  - Pool size set to 14 (2× attribute count); channel buffer size 512
+  - WaitGroup for goroutine fan-in at code level
+  - Context cancellation timeout per attribute call: 15 seconds
+- **Premium/standard topic separation** for priority processing
+  - Consumer group naming convention: `{service}-{tier}-consumer-group`
+  - Premium topic partition count: 12; standard topic partition count: 6
+  - Kafka consumer poll timeout set to 1,000ms per tier
+- **Reconciliation scheduler** to detect and recover unprocessed items
+  - Polling query: SELECT WHERE status='PENDING' AND updated_at < NOW()-5min
+  - Scan interval: 10 seconds; DB connection timeout: 3 seconds per cycle
+  - Batch size per scan capped at 100 rows
+- **Idempotency** via (image_id + attribute) composite key for deduplication
+  - Redis TTL for idempotency key set to 24 hours
+  - Key format: `idem:{image_id}:{attribute_name}`
+- **Partial failure non-blocking retry**: success saved, failures to retry topic
+  - Exponential backoff base 2s, cap 30s, jitter factor 0.2
+  - 3 retries then DLQ; DLQ retention period 7 days
+  - Retry topic max.poll.records set to 50; offset commit interval: 500ms
+
+**Result**
+- SLA **55%→95%**, premium display **2hr→40min**
+- Failed-attribute-only retry → API cost **80% reduction**
+```
+R5 FAIL — Layer 2: 14 sub-bullets contain configuration values (pool size, buffer size, timeout, partition count, poll timeout, scan interval, batch size, TTL, key format, backoff parameters, DLQ retention, poll records, commit interval) without design rationale or systemic consequence — none meet Impact/Judgment/Depth criteria. Layer 3: detail spill (parameters listed without explaining why those values were chosen or what happens if they are different).
+
+**Note on implementation parameters vs design decisions:** A parameter CAN be a design decision when paired with its systemic consequence (e.g., "reduced max.poll.records from 500 to 50 to prevent rebalance loops within 30s session timeout"). The test is whether removing the parameter hides a *decision rationale*, not whether it contains a number. Apply the Point Selection test (Layer 2) to determine if a parameter earns inclusion.
+
+---
+
+## Structural Guide
+
+### 2-Level Bullet Structure
+
+2-level bullet structure is permitted and may improve readability for complex decision entries:
+
+- **Main bullet (bold):** Core decision or approach
+  - Sub-bullet: Rejected alternative with context-specific reason
+  - Sub-bullet: Accepted tradeoff or limitation
+  - Sub-bullet: Design constraint motivating the choice
+
+**Purpose:** Scanning readers can read main bullets only to grasp the overall strategy. Depth-seeking readers (hiring managers, technical interviewers) can read sub-bullets for reasoning detail.
+
+This is guidance, not a rule. Single-level bullets remain valid when the decision is straightforward.
 
 ---
 
@@ -383,11 +564,11 @@ This entry passed E3b CASCADING (0.85) — the technical depth is validated. But
 
 | R Item | Verdict | Specific Issue |
 |---|---|---|
-| R1 | FAIL | Problem Definition bullets 4-5 (re-inspection dependency, consigner refusal) are narratively resolved by Strategy bullets 3-4. Removing them creates no gap — the reader encounters the solutions that address these concerns naturally. Technical Challenge section (4 lines) largely repeats Problem Definition constraints. |
+| R1 | FAIL | Problem Definition bullets 4-5 (re-inspection dependency, consigner refusal) establish constraints that Strategy bullets 3-4 address. However, Strategy bullets 3-4 reintroduce these constraints within their own framing ('decouple return resolution from settlement pipeline', 'platform absorption workflow'), making the Problem Definition statements redundant. The test is not 'does the information appear elsewhere' but 'is the reasoning visible without this sentence' — and Strategy makes the reasoning self-contained. Technical Challenge section (4 lines) largely repeats Problem Definition constraints. |
 | R2 | PASS | Result section has bold metrics, flow is top-to-bottom |
-| R3 | FAIL | "Technical Challenge" exists as a separate section — must merge into Problem Definition. Strategy bullet 2 starts with problem context ("External APIs cannot participate in DB transactions") |
+| R3 | FAIL | Problem Definition bullet 3 ("PG and carrier APIs are outside DB transaction boundary → partial failure inconsistency") and Technical Challenge bullet 2 ("PG/carrier APIs outside DB transaction boundary → partial completion states require compensation") state the same constraint in two different layers — this is cross-layer content duplication (violation type 1). The constraint belongs in one place; restating it in Technical Challenge adds no new information. Note: Strategy bullet 2's design rationale ("External APIs cannot participate in DB transactions, so steps execute sequentially per blame type with reverse compensation on failure") is the correct pattern — constraint motivates orchestrator choice inline, which is valid. R3 FAIL is for structural duplication between Problem Definition and Technical Challenge, not for the Strategy rationale. |
 | R4 | PASS | Orchestrator, Choreography, compensating transaction — standard terms used |
-| R5 | FAIL | ~33 lines total, far exceeds 20-line hard cap. Problem Definition (5 lines) + Technical Challenge (4 lines) = 9 lines before Strategy even begins |
+| R5 | FAIL | Layer 2: Technical Challenge bullets (4 lines) describe constraints already established in Problem Definition without independently demonstrating Impact, Judgment, or Depth — these are restated problem context, not selected engineering decisions. Problem Definition bullets 4-5 (re-inspection dependency, consigner refusal) are self-contained by their corresponding Strategy bullets. Layer 3: exhaustive listing — Problem Definition (5 bullets) + Technical Challenge (4 bullets) = 9 bullets of context before any solution begins, with no curation of which constraints are most essential to the narrative. |
 
 ### Complete Entry: PASS (All R1-R5)
 
@@ -421,12 +602,12 @@ The same entry compressed for resume readability. All R items pass.
 |---|---|---|
 | R1 PASS | Every sentence is load-bearing. Remove "PG/carrier APIs outside DB transaction boundary" → orchestrator introduction has no motivation. Remove "LLM photo analysis rejected" → rule-based choice appears unexamined. Consigner refusal workflow removed entirely — serves as interview hook. |
 | R2 PASS | Problem (2 lines) → Strategy (7 lines) → Result (2 lines). Bold before→after metrics in Result. 6-second scan captures: "3-party blame automation + compensating workflow → 3 days→same day, 8→1 disputes." |
-| R3 PASS | No separate "Technical Challenge" section. Key constraint (external API boundary) merged into Problem Definition line 2. Strategy contains only actions. Result contains only metrics. |
+| R3 PASS | No layer bleeding — key constraint (external API boundary) in Problem Definition, all Strategy bullets are actions, Result contains only metrics. |
 | R4 PASS | Orchestrator, Choreography, compensating transaction, settlement hold — all industry-standard terms. "3-party blame" is domain-specific but self-explanatory. |
-| R5 PASS | 14 lines total. 3 technical decisions (blame classification + orchestrator + settlement hold) = high complexity → ≤20 line budget. At 14 lines, comfortably within budget. |
+| R5 PASS | Layer 1: three strategies (structured inspection, orchestrator workflow, settlement 2-phase) visible at top-level via bold. 5-second scan captures problem, decisions, and result. Layer 2: all decisions meet Judgment criterion — each includes a rejected alternative with context-specific reason (LLM photo analysis, Choreography, provisional refund). Layer 3: no symptoms — no detail spill, no exhaustive listing (consigner refusal workflow deliberately omitted as curation decision), no within-section scan dependency. |
 
 **What was removed and why:**
 - Consigner refusal branch workflow → 4th strategy, but ancillary. Left as interview hook ("What happens when the consigner refuses?")
-- Technical Challenge section → key constraints merged into Problem Definition in 1 line
+- Technical Challenge section → Key constraint (API transaction boundary) merged into Problem Definition because this entry's two constraints could be presented alongside business context without diluting distinct signal. In entries with numerous complex engineering constraints, a separate Technical Challenge section would serve a distinct role.
 - Problem Definition bullets 3-5 → settlement axis detail, re-inspection dependency, consigner refusal are all addressed by their corresponding Strategy bullets
 - Result bullets 3-4 → "compensating transactions" kept (core value); "consigner refusal automation" removed (strategy was also removed)
